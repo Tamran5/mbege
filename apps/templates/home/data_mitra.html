@@ -1,0 +1,263 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} {{ title }} {% endblock title %}
+
+{% block content %}
+
+<div class="header bg-primary pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6 col-7">
+                    <h6 class="h2 text-white d-inline-block mb-0">Mitra Dapur Aktif</h6>
+                    <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+                        <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+                            <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
+                            <li class="breadcrumb-item active" aria-current="page">{{ current_user.district }}</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt--6">
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header border-0">
+                    <h3 class="mb-0">Database Dapur Umum - Kec. {{ current_user.district }}</h3>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table align-items-center table-flush">
+                        <thead class="thead-light">
+                            <tr>
+                                <th scope="col" class="sort">Nama Dapur</th>
+                                <th scope="col" class="sort">Penanggung Jawab</th>
+                                <th scope="col" class="sort">Kontak (WA)</th>
+                                <th scope="col" class="sort">Kapasitas & Staff</th>
+                                <th scope="col">Alamat</th>
+                                <th scope="col">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="list">
+                            {% for user in mitra_list %}
+                            <tr>
+                                <th scope="row">
+                                    <div class="media align-items-center">
+                                        <a href="#" class="avatar rounded-circle mr-3">
+                                            <span class="avatar-title bg-gradient-success rounded-circle text-white font-weight-bold">
+                                                {{ (user.kitchen_name or 'MT')[:2].upper() }}
+                                            </span>
+                                        </a>
+                                        <div class="media-body">
+                                            <span class="name mb-0 text-sm font-weight-bold">
+                                                {{ user.kitchen_name or "Tanpa Nama" }}
+                                            </span>
+                                            <br>
+                                            <span class="badge badge-pill badge-primary">{{ user.mitra_type }}</span>
+                                        </div>
+                                    </div>
+                                </th>
+
+                                <td>
+                                    <div class="text-sm">{{ user.fullname }}</div>
+                                    <small class="text-muted">NIK: {{ user.nik }}</small>
+                                </td>
+
+                                <td>
+                                    {% if user.whatsapp %}
+                                    <a href="https://wa.me/62{{ user.whatsapp[1:] if user.whatsapp.startswith('0') else user.whatsapp }}"
+                                        target="_blank" class="btn btn-sm btn-success">
+                                        <i class="fab fa-whatsapp"></i> {{ user.whatsapp }}
+                                    </a>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <span class="completion mr-2">{{ user.capacity or 0 }} Porsi</span>
+                                        <div>
+                                            <small class="text-muted">({{ user.staff_count or 0 }} Staff)</small>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td class="text-wrap" style="max-width: 200px;">
+                                    <small>{{ user.address }}</small>
+                                </td>
+
+                                <td class="text-right">
+                                    {% set user_data = {
+                                    'id': user.id,
+                                    'kitchen_name': user.kitchen_name or "",
+                                    'fullname': user.fullname or "",
+                                    'nik': user.nik or "",
+                                    'whatsapp': user.whatsapp or "",
+
+                                    'province': user.province or "",
+                                    'regency': user.regency or "",
+                                    'district': user.district or "",
+
+                                    'address': (user.address or "") | replace('\n', ' '),
+                                    'coordinates': user.coordinates or "",
+                                    'file_ktp': user.file_ktp or "",
+                                    'file_slhs': user.file_slhs or "",
+                                    'file_kitchen_photo': user.file_kitchen_photo or ""
+                                    } %}
+
+                                    <button class="btn btn-sm btn-primary" type="button"
+                                        data-mitra='{{ user_data | tojson }}'
+                                        onclick="showMitraDetail(JSON.parse(this.getAttribute('data-mitra')))">
+                                        Review
+                                    </button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4">
+                                    <div class="empty-state">
+                                        <i class="fas fa-folder-open fa-2x text-muted mb-3"></i>
+                                        <p class="text-muted">Belum ada mitra dapur aktif di kecamatan ini.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card-footer py-4">
+                    <nav aria-label="...">
+                        <ul class="pagination justify-content-end mb-0">
+                            <li class="page-item disabled"><a class="page-link" href="#" tabindex="-1"><i
+                                        class="fas fa-angle-left"></i></a></li>
+                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item"><a class="page-link" href="#"><i class="fas fa-angle-right"></i></a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include "includes/footer.html" %}
+</div>
+
+<div class="modal fade" id="modalDetailMitra" tabindex="-1" role="dialog" aria-labelledby="modalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalLabel">Detail Mitra Dapur</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-5">
+                        <img id="modalImg" src="" class="img-fluid rounded shadow mb-3"
+                            style="max-height: 250px; width: 100%; object-fit: cover;">
+                        <div class="text-center">
+                            <h3 id="modalKitchenName" class="mb-0 font-weight-bold"></h3>
+                            <small id="modalFullname" class="text-muted"></small>
+                        </div>
+                    </div>
+
+                    <div class="col-md-7">
+                        <h6 class="heading-small text-muted mb-2">Lokasi & Alamat</h6>
+                        <p class="mb-1 text-sm"><i class="fas fa-map-marker-alt mr-2"></i> <span
+                                id="modalAddress"></span></p>
+                        <p class="mb-4 text-sm font-weight-bold"><span id="modalDistrict"></span>, <span
+                                id="modalRegency"></span></p>
+
+                        <h6 class="heading-small text-muted mb-2">Dokumen Digital</h6>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+                                <span class="text-sm">Foto KTP</span>
+                                <a id="linkKtp" href="#" target="_blank"
+                                    class="btn btn-sm btn-outline-primary">Lihat</a>
+                            </li>
+                            <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+                                <span class="text-sm">Sertifikat SLHS</span>
+                                <a id="linkSlhs" href="#" target="_blank"
+                                    class="btn btn-sm btn-outline-primary">Lihat</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+    function showMitraDetail(data) {
+        // --- 1. Set Text Informasi Dasar ---
+        document.getElementById('modalKitchenName').innerText = data.kitchen_name;
+        document.getElementById('modalFullname').innerText = data.fullname;
+
+        // --- 2. Set Lokasi Hirarki ---
+        const district = data.district ? "Kec. " + data.district : "-";
+        const regency = data.regency ? data.regency : "";
+        const province = data.province ? data.province : "";
+
+        // Tampilkan Alamat Jalan
+        document.getElementById('modalAddress').innerText = data.address;
+
+        // Tampilkan Hierarki Wilayah di Modal
+        document.getElementById('modalDistrict').innerText = district;
+        document.getElementById('modalRegency').innerText = regency + (province ? " - " + province : "");
+
+        // --- 3. Set Images & Dokumen ---
+        const defaultImg = "/static/assets/img/theme/sketch.jpg";
+
+        // Foto Dapur
+        const imgElement = document.getElementById('modalImg');
+        if (data.file_kitchen_photo && data.file_kitchen_photo !== 'None' && data.file_kitchen_photo !== '') {
+            imgElement.src = "/static/uploads/" + data.file_kitchen_photo;
+        } else {
+            imgElement.src = defaultImg;
+        }
+
+        // Link KTP
+        const btnKtp = document.getElementById('linkKtp');
+        if (data.file_ktp && data.file_ktp !== 'None' && data.file_ktp !== '') {
+            btnKtp.href = "/static/uploads/" + data.file_ktp;
+            btnKtp.classList.remove('disabled', 'btn-outline-secondary');
+            btnKtp.classList.add('btn-outline-primary');
+        } else {
+            btnKtp.href = "#";
+            btnKtp.classList.add('disabled', 'btn-outline-secondary');
+            btnKtp.classList.remove('btn-outline-primary');
+        }
+
+        // Link SLHS
+        const btnSlhs = document.getElementById('linkSlhs');
+        if (data.file_slhs && data.file_slhs !== 'None' && data.file_slhs !== '') {
+            btnSlhs.href = "/static/uploads/" + data.file_slhs;
+            btnSlhs.classList.remove('disabled', 'btn-outline-secondary');
+            btnSlhs.classList.add('btn-outline-primary');
+        } else {
+            btnSlhs.href = "#";
+            btnSlhs.classList.add('disabled', 'btn-outline-secondary');
+            btnSlhs.classList.remove('btn-outline-primary');
+        }
+
+        // --- 4. Tampilkan Modal ---
+        $('#modalDetailMitra').modal('show');
+    }
+</script>
+{% endblock javascripts %}

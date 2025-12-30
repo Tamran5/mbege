@@ -1,0 +1,84 @@
+/* --- UTILS --- */
+.bg-primary { background-color: #5e72e4 !important; }
+.pb-6 { padding-bottom: 4rem !important; }
+.mt--6 { margin-top: -4rem !important; }
+
+/* --- AVATAR & PROFIL --- */
+.avatar-table {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.avatar-preview {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.pointer { cursor: pointer; }
+
+/* --- BADGE COLORS --- */
+.badge-role-chef { background-color: #2dce89; color: white; }
+.badge-role-cook { background-color: #11cdef; color: white; }
+.badge-role-packer { background-color: #fb6340; color: white; }
+.badge-role-helper { background-color: #adb5bd; color: white; }
+.badge-role-driver { background-color: #5e72e4; color: white; }
+
+/* --- ANIMATION --- */
+.fade-in { animation: fadeIn 0.4s ease-in-out; }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- TOMBOL ABSENSI (3 STATE) --- */
+.btn-attendance {
+    min-width: 110px;
+    font-weight: 600;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+}
+
+/* 1. Belum Masuk (Outline Hijau) */
+.btn-check-in {
+    background-color: transparent;
+    color: #2dce89;
+    border: 1px solid #2dce89;
+}
+.btn-check-in:hover {
+    background-color: #2dce89;
+    color: #fff;
+    box-shadow: 0 4px 6px rgba(45, 206, 137, 0.3);
+}
+
+/* 2. Sedang Kerja (Solid Hijau) */
+.btn-check-out {
+    background-color: #2dce89;
+    color: #fff;
+    border: 1px solid #2dce89;
+}
+.btn-check-out:hover {
+    background-color: #fff;
+    color: #f5365c;
+    border-color: #f5365c;
+}
+.btn-check-out:hover::after {
+    content: " Out";
+}
+
+/* 3. Sudah Pulang (Abu-abu Disable) */
+.btn-done {
+    background-color: #e9ecef;
+    color: #8898aa;
+    border: 1px solid #e9ecef;
+    cursor: not-allowed;
+}

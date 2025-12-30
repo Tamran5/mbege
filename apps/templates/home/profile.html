@@ -1,0 +1,235 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Profile {% endblock title %}
+
+{% block content %}
+
+<div class="header pb-6 d-flex align-items-center" 
+     style="min-height: 500px; background-image: url(/static/assets/img/theme/profile-cover.jpg); background-size: cover; background-position: center top;">
+  <span class="mask bg-gradient-default opacity-8"></span>
+  <div class="container-fluid d-flex align-items-center">
+    <div class="row">
+      <div class="col-lg-10 col-md-10">
+        <h1 class="display-2 text-white">Hello, {{ current_user.fullname or current_user.username }}</h1>
+        <p class="text-white mt-0 mb-5">
+            {% if current_user.role == 'super_admin' %}
+                Ini adalah halaman profil Administrator Sistem.
+            {% else %}
+                Halaman profil ini menampilkan detail data kemitraan dan informasi operasional dapur Anda.
+            {% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt--6">
+  <div class="row">
+    
+    <div class="col-xl-4 order-xl-2">
+      <div class="card card-profile">
+        <img src="/static/assets/img/theme/img-1-1000x600.jpg" alt="Image placeholder" class="card-img-top">
+        <div class="row justify-content-center">
+          <div class="col-lg-3 order-lg-2">
+            <div class="card-profile-image">
+              <a href="#">
+                <img src="/static/assets/img/theme/team-4.jpg" class="rounded-circle">
+              </a>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-header text-center border-0 pt-8 pt-md-4 pb-0 pb-md-4">
+          <div class="d-flex justify-content-center">
+            {% if current_user.role == 'admin_dapur' %}
+                <a href="#" class="btn btn-sm btn-info mr-4">Admin Dapur</a>
+            {% else %}
+                <a href="#" class="btn btn-sm btn-primary">Admin Gizi</a>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="card-body pt-0 mt-4">
+          <div class="text-center">
+            <h5 class="h3 font-weight-bold text-capitalize mb-0">
+                {% if current_user.role == 'super_admin' %}
+                    {{ current_user.fullname or current_user.username }}
+                {% else %}
+                    {{ current_user.kitchen_name or 'Nama Dapur' }}
+                    <span class="font-weight-light d-block h5 mt-1 text-muted">{{ current_user.district or '-' }}, {{ current_user.regency or '-' }}</span>
+                {% endif %}
+            </h5>
+            
+            <div class="h5 font-weight-300 mt-2">
+              <i class="fas fa-id-card mr-2"></i> 
+              {% if current_user.role == 'super_admin' %}
+                  Administrator Pusat
+              {% else %}
+                  {{ current_user.mitra_type or 'Tipe Mitra' }}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-8 order-xl-1">
+      <div class="card shadow">
+        <div class="card-header">
+          <div class="row align-items-center">
+            <div class="col-8">
+              <h3 class="mb-0">Edit Profil</h3>
+            </div>
+            <div class="col-4 text-right">
+              <button type="button" id="btn-edit-profile" class="btn btn-sm btn-primary">Edit Data</button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-body">
+            <form method="POST">
+            {# form.hidden_tag() #} 
+            
+            <h6 class="heading-small text-muted mb-4">Informasi Akun & Kontak</h6>
+            <div class="pl-lg-4">
+              <div class="row">
+                <div class="col-lg-6">
+                  <div class="form-group">
+                    <label class="form-control-label">Username</label>
+                    <input type="text" name="username" class="form-control" value="{{ current_user.username }}" readonly>
+                  </div>
+                </div>
+                <div class="col-lg-6">
+                  <div class="form-group">
+                    <label class="form-control-label">Alamat Email</label>
+                    <input type="email" name="email" class="form-control editable-field" value="{{ current_user.email or '' }}" readonly>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-lg-6">
+                  <div class="form-group">
+                    <label class="form-control-label">Nama Lengkap Pengelola</label>
+                    <input type="text" name="fullname" class="form-control editable-field" value="{{ current_user.fullname or '' }}" readonly>
+                  </div>
+                </div>
+                <div class="col-lg-6">
+                  <div class="form-group">
+                    <label class="form-control-label">No. WhatsApp</label>
+                    <input type="text" name="whatsapp" class="form-control editable-field" value="{{ current_user.whatsapp or '' }}" readonly>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <hr class="my-4" />
+            <h6 class="heading-small text-muted mb-4">Informasi Wilayah & Lokasi</h6>
+            <div class="pl-lg-4">
+              <div class="row">
+                <div class="col-md-12">
+                  <div class="form-group">
+                    <label class="form-control-label">Alamat Lengkap Dapur</label>
+                    <input type="text" name="address" class="form-control editable-field" value="{{ current_user.address or '' }}" readonly>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-lg-6">
+                  <div class="form-group">
+                    <label class="form-control-label">Kecamatan</label>
+                    <input type="text" class="form-control" value="{{ current_user.district or '' }}" readonly>
+                  </div>
+                </div>
+                <div class="col-lg-6">
+                  <div class="form-group">
+                    <label class="form-control-label">Kabupaten / Kota</label>
+                    <input type="text" class="form-control" value="{{ current_user.regency or '' }}" readonly>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <hr class="my-4" />
+            <h6 class="heading-small text-muted mb-4">Keamanan Akun</h6>
+            <div class="pl-lg-4">
+              <div class="row">
+                 <div class="col-md-12">
+                    <div class="form-group">
+                        <label class="form-control-label">Ganti Password</label>
+                        <div class="input-group input-group-merge">
+                            <input type="password" name="password" id="input-password" class="form-control editable-field" placeholder="Kosongkan jika tidak ingin mengganti" readonly>
+                            <div class="input-group-append" id="password-eye-area" style="display: none;">
+                                <span class="input-group-text" id="toggle-password" style="cursor: pointer;">
+                                    <i class="fas fa-eye" id="icon-password"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <small class="text-muted">Gunakan kombinasi angka dan huruf untuk keamanan.</small>
+                    </div>
+                 </div>
+              </div>
+            </div>
+
+            <div class="text-right mt-4" id="save-button-container" style="display: none;">
+                <hr class="my-4" />
+                <button type="submit" class="btn btn-primary btn-lg px-5">Update Profil</button>
+                <a href="{{ request.url }}" class="btn btn-secondary btn-lg">Batal</a>
+            </div>
+
+            </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% include "includes/footer.html" %}
+
+</div>
+
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const btnEdit = document.getElementById('btn-edit-profile');
+        const saveContainer = document.getElementById('save-button-container');
+        const editableInputs = document.querySelectorAll('.editable-field');
+        const passwordEyeArea = document.getElementById('password-eye-area');
+
+        btnEdit.addEventListener('click', function() {
+            saveContainer.style.display = 'block';
+            btnEdit.style.display = 'none';
+
+            if (passwordEyeArea) {
+                passwordEyeArea.style.display = 'flex';
+            }
+
+            editableInputs.forEach(function(input) {
+                input.removeAttribute('readonly');
+                input.classList.add('is-editing'); // Tambahkan class jika perlu style khusus
+            });
+        });
+
+        const togglePassword = document.getElementById('toggle-password');
+        const passwordInput = document.getElementById('input-password');
+        const passwordIcon = document.getElementById('icon-password');
+
+        if (togglePassword) {
+            togglePassword.addEventListener('click', function() {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                passwordIcon.classList.toggle('fa-eye');
+                passwordIcon.classList.toggle('fa-eye-slash');
+            });
+        }
+    });
+</script>
+
+<style>
+    .is-editing {
+        background-color: #fff !important;
+        border-color: #5e72e4 !important;
+    }
+</style>
+{% endblock javascripts %}

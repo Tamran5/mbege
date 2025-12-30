@@ -1,0 +1,222 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Dashboard Operasional Dapur {% endblock title %}
+
+{% block stylesheets %}
+<link rel="stylesheet" href="/static/assets/css/monitoring.css">
+{% endblock stylesheets %}
+
+{% block content %}
+
+<div class="header bg-primary pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6 col-7">
+                    <h6 class="h2 text-white d-inline-block mb-0">Halo, Admin Dapur!</h6>
+                    <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+                        <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+                            <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
+                            <li class="breadcrumb-item active">Input Harian</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div id="statusCard" class="card bg-white border-0 shadow">
+                        <div class="card-body py-3">
+                            <div class="row align-items-center">
+                                <div class="col-auto">
+                                    <div id="statusIconBg"
+                                        class="icon icon-shape bg-light text-primary rounded-circle shadow">
+                                        <i id="statusIcon" class="fas fa-sync fa-spin"></i>
+                                    </div>
+                                </div>
+                                <div class="col ml--2">
+                                    <h4 class="mb-0 text-dark text-uppercase" id="statusTitle">MEMUAT SISTEM...</h4>
+                                    <span class="text-muted" id="statusDesc">Sinkronisasi jam server...</span>
+                                </div>
+                                <div class="col-auto text-right">
+                                    <h2 class="text-primary mb-0" id="clockDisplay" style="font-family: monospace;">
+                                        00:00:00</h2>
+                                </div>
+                            </div>
+                            <div class="progress mt-3 mb-0" style="height: 5px;">
+                                <div id="statusBar" class="progress-bar bg-primary" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card-stats">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col">
+                                    <h5 class="card-title text-uppercase text-muted mb-0">Target Porsi</h5>
+                                    <span class="h2 font-weight-bold mb-0">{{ target_porsi }}</span>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="icon icon-shape bg-gradient-red text-white rounded-circle shadow">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card-stats">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col" style="min-width: 0;">
+                                    <h5 class="card-title text-uppercase text-muted mb-0">Aktivitas Terakhir</h5>
+                                    <span class="h2 font-weight-bold mb-0 d-block text-truncate" id="lastAction"
+                                        title="Menunggu Input...">
+                                        -
+                                    </span>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="icon icon-shape bg-gradient-orange text-white rounded-circle shadow">
+                                        <i class="fas fa-history"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt--6">
+    <div class="row">
+
+        <div class="col-xl-5 order-xl-2">
+            <div class="card">
+                <div class="card-header bg-white border-0">
+                    <div class="row align-items-center">
+                        <div class="col-8">
+                            <h3 class="mb-0">Input Aktivitas</h3>
+                        </div>
+                        <div class="col-4 text-right">
+                            <span class="badge badge-pill badge-primary">Wajib</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form id="kitchenForm">
+
+                        <div class="form-group">
+                            <label class="form-control-label font-weight-bold">Tahapan Proses</label>
+                            <select id="processInput" class="form-control" required>
+                                <option value="" disabled selected>Pilih aktivitas...</option>
+                                <option value="Persiapan Bahan">Persiapan Bahan</option>
+                                <option value="Pengolahan/Memasak">Pengolahan/Memasak</option>
+                                <option value="Quality Control">Quality Control</option>
+                                <option value="Pengemasan">Pengemasan</option>
+                                <option value="Distribusi">Distribusi</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-control-label font-weight-bold">Waktu Pencatatan (Otomatis)</label>
+                            <div class="input-group input-group-merge">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text"><i class="far fa-clock"></i></span>
+                                </div>
+                                <input type="text" id="autoTimeInput" class="form-control font-weight-bold text-dark"
+                                    readonly style="background-color: #e9ecef; cursor: not-allowed;">
+                            </div>
+                            <small class="text-muted">Waktu diambil saat tombol ditekan.</small>
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <label class="form-control-label font-weight-bold">Bukti Foto</label>
+
+                            <div class="camera-container shadow-sm" id="cameraBox">
+                                <div id="cameraPlaceholder">
+                                    <div class="icon">
+                                        <i class="fas fa-camera"></i>
+                                    </div>
+                                    <p class="text-sm">Foto Real-time</p>
+                                    <button type="button" class="btn btn-sm btn-outline-primary px-4"
+                                        onclick="startCamera()">
+                                        <i class="fas fa-power-off mr-2"></i>Aktifkan Kamera
+                                    </button>
+                                </div>
+
+                                <video id="videoElement" autoplay playsinline></video>
+                                <canvas id="canvasElement" style="display:none;"></canvas>
+                                <img id="photoPreview" src="">
+                            </div>
+
+                            <div class="row mt-3" id="cameraControls" style="display:none;">
+                                <div class="col-6">
+                                    <button type="button" class="btn btn-warning btn-block shadow-sm"
+                                        onclick="takePhoto()">
+                                        <i class="fas fa-circle mr-1"></i> Jepret
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button type="button" class="btn btn-secondary btn-block shadow-sm"
+                                        onclick="resetCamera()">
+                                        <i class="fas fa-sync-alt mr-1"></i> Ulang
+                                    </button>
+                                </div>
+                            </div>
+                            <input type="hidden" id="photoData" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg btn-block mt-4 shadow">
+                            <i class="fas fa-paper-plane mr-2"></i> Update Status
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-7 order-xl-1">
+            <div class="card">
+                <div class="card-header border-0">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h3 class="mb-0">Riwayat Hari Ini</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-items-center table-flush">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Jam</th>
+                                <th>Aktivitas</th>
+                                <th>Bukti</th>
+                                <th>Status</th>
+                                <th class="text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTable">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include "includes/footer.html" %}
+</div>
+
+{% endblock content %}
+
+{% block javascripts %}
+<script src="/static/assets/js/monitoring.js"></script>
+{% endblock javascripts %}

@@ -1,0 +1,94 @@
+/* --- CSS KHUSUS DASHBOARD DAPUR --- */
+
+/* 1. Status Card (Aksen Kiri Biru) */
+#statusCard {
+    border-left: 5px solid #5e72e4;
+    transition: all 0.3s ease;
+}
+
+/* 2. Container Kamera (Anti-Geser Layout) */
+.camera-container {
+    position: relative; /* KUNCI: Menjadi acuan posisi elemen di dalamnya */
+    background-color: #f8f9fe;
+    border: 2px dashed #d1d5db;
+    border-radius: 0.75rem;
+    height: 250px; /* Tinggi Tetap */
+    width: 100%;
+    overflow: hidden; /* Potong apa pun yang keluar dari kotak */
+    transition: all 0.3s ease;
+}
+
+.camera-container:hover {
+    border-color: #5e72e4;
+    background-color: #fff;
+}
+
+/* 3. Placeholder (Logo & Tombol) */
+#cameraPlaceholder {
+    position: absolute; /* Paksa menempel memenuhi kotak */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    
+    /* Flexbox untuk menaruh konten tepat di tengah */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    
+    z-index: 10; /* Layer paling bawah */
+    background-color: #f8f9fe; 
+}
+
+/* Styling Ikon Kamera */
+#cameraPlaceholder .icon {
+    width: 4rem;
+    height: 4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+    
+    background: linear-gradient(87deg, #5e72e4 0, #825ee4 100%);
+    color: white;
+    border-radius: 50%;
+    box-shadow: 0 4px 6px rgba(50, 50, 93, .11), 0 1px 3px rgba(0, 0, 0, .08);
+}
+
+#cameraPlaceholder p {
+    margin-bottom: 1rem;
+    font-weight: 600;
+    color: #8898aa;
+}
+
+/* 4. Video & Preview (Menimpa Placeholder) */
+#videoElement, #photoPreview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    
+    display: none; /* Default sembunyi */
+    z-index: 20; /* Layer di atas placeholder */
+    border-radius: 0.6rem;
+}
+
+/* State Aktif */
+.camera-active {
+    border: 2px solid #5e72e4;
+    background-color: #000;
+}
+
+/* 5. Animasi Tabel */
+.new-row {
+    animation: flash 1s ease-out;
+}
+@keyframes flash {
+    0% { background-color: #d1f2e8; }
+    100% { background-color: transparent; }
+}

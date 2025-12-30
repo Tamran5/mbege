@@ -1,0 +1,172 @@
+{% extends 'layouts/base-fullscreen.html' %}
+
+{% block title %} Mulai Bergabung - MBG {% endblock title %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --primary-blue: #0d6efd;
+        --soft-bg: #f8fafc;
+        --border-color: #e2e8f0;
+        --text-dark: #1e293b;
+    }
+
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-color: #f4f7f6;
+        min-height: 100vh;
+    }
+
+    /* --- Container Utama --- */
+    .choice-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    /* --- Choice Card - Tampilan Standar --- */
+    .choice-card {
+        background: #ffffff;
+        border-radius: 20px;
+        border: 1px solid var(--border-color);
+        padding: 40px 30px;
+        text-align: center;
+        transition: all 0.2s ease; /* Transisi standar & cepat */
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        text-decoration: none !important;
+    }
+
+    /* --- Hover Biasa (Hanya perubahan warna halus) --- */
+    .choice-card:hover {
+        border-color: var(--primary-blue);
+        background-color: #fcfdfe;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+        /* Tidak ada transform: translateY agar tidak melompat */
+    }
+
+    /* --- Icon Box --- */
+    .icon-box {
+        width: 64px;
+        height: 64px;
+        background: #f1f5f9;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 24px;
+        color: #64748b;
+        transition: all 0.2s ease;
+    }
+
+    .choice-card:hover .icon-box {
+        background: var(--primary-blue);
+        color: white;
+    }
+
+    .icon-box img {
+        width: 30px;
+    }
+
+    /* --- Typography --- */
+    h2.main-title {
+        font-weight: 700;
+        color: var(--text-dark);
+        margin-bottom: 8px;
+    }
+
+    .choice-card h5 {
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 12px;
+    }
+
+    .choice-card p {
+        color: #64748b;
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    /* --- Button Styles --- */
+    .btn-choice {
+        margin-top: auto;
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        border: 1px solid #e2e8f0;
+        color: #64748b;
+        transition: all 0.2s;
+    }
+
+    .choice-card:hover .btn-choice {
+        background: var(--primary-blue);
+        color: white;
+        border-color: var(--primary-blue);
+    }
+
+    .back-link {
+        color: #94a3b8;
+        font-size: 0.85rem;
+        margin-top: 40px;
+        display: inline-block;
+        transition: color 0.2s;
+    }
+
+    .back-link:hover {
+        color: var(--primary-blue);
+    }
+</style>
+
+<div class="choice-container">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-xl-7">
+                
+                <div class="text-center mb-5">
+                    <h2 class="main-title">Pilih Metode Pendaftaran</h2>
+                    <p class="text-muted">Silakan pilih cara untuk mendaftarkan dapur Anda ke sistem MBG</p>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <a href="{{ url_for('authentication_blueprint.google_login', intent='register') }}" class="choice-card">
+                            <div class="icon-box">
+                                <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" alt="Google">
+                            </div>
+                            <h5>Daftar dengan Google</h5>
+                            <p>Cara cepat. Nama dan email Anda akan terisi otomatis dari akun Google.</p>
+                            <div class="btn-choice">Gunakan Akun Google</div>
+                        </a>
+                    </div>
+
+                    <div class="col-md-6">
+                        <a href="{{ url_for('authentication_blueprint.register') }}" class="choice-card">
+                            <div class="icon-box">
+                                <i class="fas fa-edit"></i>
+                            </div>
+                            <h5>Pendaftaran Manual</h5>
+                            <p>Isi formulir secara mandiri dengan email dan data lengkap Anda.</p>
+                            <div class="btn-choice">Isi Formulir Manual</div>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <a href="{{ url_for('authentication_blueprint.login') }}" class="back-link text-decoration-none">
+                        <i class="fas fa-arrow-left me-1"></i> Kembali ke Masuk
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

@@ -1,0 +1,224 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Katalog Menu MBG {% endblock title %}
+
+{% block content %}
+<div class="header bg-primary pb-6">
+  <div class="container-fluid">
+    <div class="header-body">
+      <div class="row align-items-center py-4">
+        <div class="col-lg-6">
+          <h6 class="h2 text-white d-inline-block mb-0">Manajemen Distribusi</h6>
+          <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+            <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+              <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
+              <li class="breadcrumb-item active">Database Katalog Menu</li>
+            </ol>
+          </nav>
+        </div>
+      </div>
+      
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+              <span class="alert-text"><strong>{{ 'Berhasil' if category == 'success' else 'Gagal' }}!</strong> {{ message }}</span>
+              <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt--6">
+  <div class="row">
+    
+    <div class="col-xl-4">
+      <div class="card shadow border-0">
+        <div class="card-header bg-transparent pb-2">
+          <h3 class="mb-0 text-uppercase text-dark"><i class="fas fa-utensils mr-2 text-muted"></i>Susun Paket SOP</h3>
+          <small class="text-muted">Setiap tanggal hanya diperbolehkan memiliki 1 menu harian.</small>
+        </div>
+        <div class="card-body pt-2">
+          <form id="form-susun-mbg" enctype="multipart/form-data" method="POST" action="{{ url_for('home_blueprint.api_simpan_menu_katalog') }}">
+            
+            <div class="form-group mb-3">
+                <label class="form-control-label text-dark">Tanggal Distribusi</label>
+                <input type="date" class="form-control text-dark" name="tgl_distribusi" required id="tgl_distribusi">
+            </div>
+
+            <div class="form-group mb-2">
+              <label class="text-xs font-weight-bold text-dark">1. KARBOHIDRAT</label>
+              <select class="form-control custom-select-mbg text-dark" name="karbo_id" required>
+                <option value="">-- Pilih Karbohidrat --</option>
+                {% for item in recipes if item.category == 'Karbohidrat' %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group mb-2">
+              <label class="text-xs font-weight-bold text-dark">2. PROTEIN HEWANI</label>
+              <select class="form-control custom-select-mbg text-dark" name="protein_h_id" required>
+                <option value="">-- Pilih Protein Hewani --</option>
+                {% for item in recipes if item.category == 'Protein Hewani' %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group mb-2">
+              <label class="text-xs font-weight-bold text-dark">3. PROTEIN NABATI</label>
+              <select class="form-control custom-select-mbg text-dark" name="protein_n_id" required>
+                <option value="">-- Pilih Protein Nabati --</option>
+                {% for item in recipes if item.category == 'Protein Nabati' %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group mb-2">
+              <label class="text-xs font-weight-bold text-dark">4. SAYURAN</label>
+              <select class="form-control custom-select-mbg text-dark" name="sayur_id" required>
+                <option value="">-- Pilih Sayuran --</option>
+                {% for item in recipes if item.category == 'Sayuran' %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group mb-3">
+              <label class="text-xs font-weight-bold text-dark">5. BUAH / SUSU</label>
+              <select class="form-control custom-select-mbg text-dark" name="susu_id" required>
+                <option value="">-- Pilih Buah atau Susu --</option>
+                {% for item in recipes if item.category in ['Buah/Susu', 'Tambahan', 'Buah'] or 'susu' in item.name|lower %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group mb-4 mt-3">
+              <label class="form-control-label text-dark"><i class="fas fa-camera mr-1"></i>Foto Sajian (QC)</label>
+              <div class="upload-preview-container mb-2" id="preview-box">
+                  <i class="fas fa-image fa-2x text-lighter"></i>
+                  <img id="image-preview" src="" alt="Preview" style="display: none;">
+              </div>
+              <div class="custom-file">
+                <input type="file" class="custom-file-input" id="input-foto" name="photo" accept="image/*" required>
+                <label class="custom-file-label text-muted" for="input-foto">Unggah hasil masakan...</label>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block shadow border-0 py-3">
+                <i class="fas fa-check-circle mr-2"></i>SIMPAN PAKET MENU
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-8">
+      <div class="card shadow border-0">
+        <div class="card-header border-0 d-flex justify-content-between align-items-center">
+          <h3 class="mb-0 text-uppercase text-dark"><i class="fas fa-history mr-2 text-muted"></i>Riwayat Distribusi</h3>
+          <small class="text-primary font-weight-bold">Akan tampil otomatis di Aplikasi Mobile</small>
+        </div>
+        
+        <div class="table-responsive">
+          <table class="table align-items-center table-flush table-hover">
+            <thead class="thead-light">
+              <tr class="text-dark">
+                <th style="width: 150px;">TANGGAL</th>
+                <th>KOMPOSISI PAKET</th>
+                <th class="text-center">AKSI</th>
+              </tr>
+            </thead>
+            <tbody class="text-dark" style="font-size: 0.9rem;">
+              {% for p in menus %}
+              <tr>
+                <td class="font-weight-bold">
+                    <span class="badge badge-dot mr-4">
+                        <i class="bg-success"></i>
+                        <span class="status text-dark">{{ p.created_at.strftime('%d/%m/%Y') }}</span>
+                    </span>
+                </td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="mr-3">
+                        {% if p.photo %}
+                            <img src="{{ url_for('static', filename='assets/img/menus/' + p.photo) }}" class="rounded shadow-sm" style="width: 50px; height: 50px; object-fit: cover;">
+                        {% else %}
+                            <div class="avatar avatar-sm rounded bg-light"><i class="fas fa-utensils text-muted"></i></div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <span class="d-block font-weight-bold text-dark">{{ p.menu_name }}</span>
+                        <small class="text-muted">{{ p.total_kcal|int }} kkal | {{ p.total_protein|int }}g Protein</small>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-center">
+                    <a href="{{ url_for('home_blueprint.hapus_menu', id=p.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Hapus menu tanggal ini? Menu tidak akan tampil lagi di mobile.')">
+                        <i class="fas fa-trash"></i> Hapus
+                    </a>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="3" class="text-center py-5 text-muted">
+                    <img src="/static/assets/img/theme/empty.png" style="width: 80px; opacity: 0.5;" class="mb-3 d-block mx-auto">
+                    Belum ada riwayat distribusi harian.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  {% include "includes/footer.html" %}
+</div>
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+  // Script Preview Foto Sajian
+  document.getElementById('input-foto').onchange = function(evt) {
+    const [file] = this.files;
+    if (file) {
+      const previewImg = document.getElementById('image-preview');
+      const previewBox = document.getElementById('preview-box');
+      
+      previewImg.src = URL.createObjectURL(file);
+      previewImg.style.display = 'block';
+      previewBox.querySelector('i').style.display = 'none';
+      
+      this.nextElementSibling.innerText = file.name;
+    }
+  };
+
+  // Set default tanggal hari ini pada input date
+  document.addEventListener('DOMContentLoaded', function() {
+      const dateInput = document.getElementById('tgl_distribusi');
+      const today = new Date().toISOString().split('T')[0];
+      dateInput.value = today;
+  });
+</script>
+
+<style>
+  .upload-preview-container {
+    width: 100%; height: 160px; border: 2px dashed #e9ecef; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; background-color: #f8f9fe;
+    overflow: hidden;
+  }
+  #image-preview { width: 100%; height: 100%; object-fit: cover; }
+  .custom-select-mbg { background-color: #ffffff; border: 1px solid #dee2e6; height: 45px !important; }
+  .alert { position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+</style>
+{% endblock javascripts %}

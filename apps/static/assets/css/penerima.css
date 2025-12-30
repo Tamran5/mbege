@@ -1,0 +1,69 @@
+/* Animasi masuk untuk baris tabel baru */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+/* Mempercantik Card Form */
+.form-control:focus {
+    border-color: #5e72e4;
+    box-shadow: 0 0 0 0.2rem rgba(94, 114, 228, 0.25);
+}
+
+/* Avatar styling */
+.avatar-icon {
+    width: 48px;
+    height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 1.2rem;
+    margin-right: 1rem;
+    font-weight: bold;
+}
+
+/* Warna Kategori */
+.bg-purple { background-color: #8965e0 !important; } 
+.text-purple { color: #8965e0 !important; }
+
+/* Responsive fix */
+@media (max-width: 1199.98px) {
+    .order-xl-1 { order: 2; } 
+    .order-xl-2 { order: 1; margin-bottom: 20px; }
+}
+
+/* Fix Alamat Panjang (Wrapping) */
+.address-wrap {
+    white-space: normal !important;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-width: 250px;
+    line-height: 1.4;
+    display: block;
+}
+
+/* STYLE TOMBOL WHATSAPP */
+.wa-btn {
+    font-size: 0.85rem !important;
+    padding: 0.4em 0.8em;
+    text-transform: none !important;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
+    background-color: #25D366 !important;
+    color: white !important;
+    border: 1px solid transparent;
+}
+
+.wa-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+    background-color: #128C7E !important;
+    cursor: pointer;
+    text-decoration: none;
+}

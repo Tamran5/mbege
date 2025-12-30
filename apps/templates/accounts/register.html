@@ -1,0 +1,390 @@
+{% extends 'layouts/base-fullscreen.html' %}
+
+{% block title %} Pendaftaran Mitra Dapur - MBG {% endblock title %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    /* --- Base Settings --- */
+    body { font-family: 'Poppins', sans-serif; background: #f5f7fa; color: #2d3748; }
+    .card-modern { border-radius: 1.5rem; border: none; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }
+
+    /* --- Menghilangkan Panah Input Number (WA/NIK) --- */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+
+    /* --- Wizard Progress Bar --- */
+    .step-wizard-list { 
+        background: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+        border-radius: 1rem; display: flex; padding: 20px; 
+        list-style-type: none; margin-bottom: 30px; justify-content: space-around; 
+    }
+    .step-wizard-item { position: relative; display: flex; flex-direction: column; align-items: center; color: #a0aec0; flex: 1; }
+    .step-wizard-item::after { 
+        content: ""; position: absolute; background: #e2e8f0; 
+        height: 2px; width: 100%; top: 15px; left: 50%; z-index: 1; 
+    }
+    .step-wizard-item:last-child::after { display: none; }
+    .progress-count { 
+        height: 30px; width: 30px; display: flex; align-items: center; justify-content: center; 
+        border-radius: 50%; background: #e2e8f0; z-index: 2; font-weight: 600; 
+        font-size: 14px; color: #fff; margin-bottom: 5px; transition: all 0.3s;
+    }
+    .step-wizard-item.current .progress-count { background: #0d6efd; transform: scale(1.1); }
+    .step-wizard-item.current { color: #0d6efd; font-weight: 600; }
+    .step-wizard-item.active .progress-count { background: #198754; }
+
+    /* --- Form Steps Control --- */
+    .form-step { display: none; animation: fadeIn 0.4s ease-in-out; }
+    .form-step.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* --- Input Styles --- */
+    .form-section-title { color: #0d6efd; font-weight: 700; border-bottom: 2px solid #f0f2f5; padding-bottom: 8px; margin-bottom: 20px; }
+    .input-group-modern { background: #f9fafb; border: 1px solid #e2e8f0; border-radius: 0.8rem; overflow: hidden; transition: all 0.2s; }
+    .input-group-modern:focus-within { border-color: #0d6efd; background: #fff; box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1); }
+    .input-group-modern .form-control, .input-group-modern .form-select { border: none; padding: 12px; background: transparent; font-size: 0.95rem; }
+    
+    .password-toggle { cursor: pointer; background: transparent; border: none; padding: 0 15px; color: #9ca3af; transition: color 0.3s; }
+    .password-toggle:hover { color: #0d6efd; }
+
+    #map { height: 350px; width: 100%; border-radius: 1rem; border: 1px solid #e2e8f0; }
+</style>
+
+<div class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-xl-8 col-lg-9">
+                
+                <ul class="step-wizard-list">
+                    <li class="step-wizard-item current" id="step-icon-0">
+                        <span class="progress-count">1</span>
+                        <span class="progress-label small">Penanggung Jawab</span>
+                    </li>
+                    <li class="step-wizard-item" id="step-icon-1">
+                        <span class="progress-count">2</span>
+                        <span class="progress-label small">Profil Dapur</span>
+                    </li>
+                    <li class="step-wizard-item" id="step-icon-2">
+                        <span class="progress-count">3</span>
+                        <span class="progress-label small">Dokumen</span>
+                    </li>
+                </ul>
+
+                <div class="card card-modern bg-white">
+                    <div class="card-body p-4 p-md-5">
+                        <form id="multiStepForm" method="POST" enctype="multipart/form-data">
+                            {{ form.hidden_tag() }}
+
+                            <div class="form-step active" id="step-0">
+                                <h5 class="form-section-title"><i class="fas fa-user-circle me-2"></i>Data Penanggung Jawab</h5>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label small fw-bold">Nama Lengkap (Sesuai KTP)</label>
+                                        <div class="input-group input-group-modern">
+                                            <span class="input-group-text bg-transparent border-0"><i class="fas fa-user text-muted"></i></span>
+                                            <input type="text" name="fullname" class="form-control" value="{{ google_data.fullname if google_data else '' }}" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold">NIK</label>
+                                        <div class="input-group input-group-modern">
+                                            <input type="number" name="nik" class="form-control" placeholder="16 Digit NIK" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold">No. WhatsApp</label>
+                                        <div class="input-group input-group-modern">
+                                            <span class="input-group-text bg-transparent border-0"><i class="fab fa-whatsapp text-muted"></i></span>
+                                            <input type="number" name="whatsapp" class="form-control" placeholder="08..." required>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label small fw-bold">Email</label>
+                                        <div class="input-group input-group-modern">
+                                            <input type="email" name="email" class="form-control" value="{{ google_data.email if google_data else '' }}" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold">Password</label>
+                                        <div class="input-group input-group-modern">
+                                            <input type="password" name="password" class="form-control" id="pass1" required>
+                                            <button class="password-toggle" type="button" onclick="togglePassword('pass1', 'eye-1')">
+                                                <i class="fas fa-eye" id="eye-1"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold">Konfirmasi Password</label>
+                                        <div class="input-group input-group-modern">
+                                            <input type="password" name="confirm_password" class="form-control" id="pass2" required>
+                                            <button class="password-toggle" type="button" onclick="togglePassword('pass2', 'eye-2')">
+                                                <i class="fas fa-eye" id="eye-2"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end mt-4">
+                                    <button type="button" class="btn btn-primary px-5 py-2 next-btn" style="border-radius:0.8rem">Lanjut <i class="fas fa-arrow-right ms-2"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="form-step" id="step-1">
+                                <h5 class="form-section-title"><i class="fas fa-store me-2"></i>Profil Unit Layanan</h5>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label small fw-bold">Nama Dapur</label>
+                                        <div class="input-group input-group-modern">
+                                            <input type="text" name="kitchen_name" class="form-control" placeholder="Cth: Dapur Berkah Mandiri" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-bold">Provinsi</label>
+                                        <div class="input-group input-group-modern">
+                                            <select class="form-select" name="province" id="province" required>
+                                                <option value="" disabled selected>Pilih Provinsi</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-bold">Kabupaten/Kota</label>
+                                        <div class="input-group input-group-modern">
+                                            <select class="form-select" name="regency" id="regency" disabled required>
+                                                <option value="" disabled selected>Pilih Kabupaten</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-bold">Kecamatan</label>
+                                        <div class="input-group input-group-modern">
+                                            <select class="form-select" name="district" id="district" disabled required>
+                                                <option value="" disabled selected>Pilih Kecamatan</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label small fw-bold">Alamat Lengkap</label>
+                                        <div class="input-group input-group-modern">
+                                            <textarea name="address" class="form-control" rows="2" placeholder="Jalan, No Rumah, RT/RW" required></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <label class="form-label small fw-bold mb-0">Titik Lokasi Dapur</label>
+                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="getLocation()" style="border-radius: 20px;">
+                                                <i class="fas fa-location-crosshairs me-1"></i> Deteksi GPS
+                                            </button>
+                                        </div>
+                                        <input type="text" id="latlongInput" name="coordinates" class="form-control mb-2 small" readonly required placeholder="Klik pada peta atau gunakan GPS...">
+                                        <div id="map"></div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between mt-4">
+                                    <button type="button" class="btn btn-light px-4 prev-btn" style="border-radius:0.8rem">Kembali</button>
+                                    <button type="button" class="btn btn-primary px-5 next-btn" style="border-radius:0.8rem">Lanjut <i class="fas fa-arrow-right ms-2"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="form-step" id="step-2">
+                                <h5 class="form-section-title"><i class="fas fa-file-upload me-2"></i>Unggah Dokumen</h5>
+                                <div class="bg-light p-4 rounded-4 mb-4 border shadow-sm">
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold">Foto KTP Penanggung Jawab (.jpg/pdf)</label>
+                                        <input type="file" name="file_ktp" class="form-control" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold">Sertifikat Laik Higiene (SLHS)</label>
+                                        <input type="file" name="file_slhs" class="form-control" required>
+                                    </div>
+                                    <div class="mb-0">
+                                        <label class="form-label small fw-bold">Foto Kondisi Dapur (Area Produksi)</label>
+                                        <input type="file" name="file_kitchen_photo" class="form-control" required>
+                                    </div>
+                                </div>
+                                <div class="form-check mb-4 p-3 bg-white border rounded-3">
+                                    <input class="form-check-input ms-0 me-2" type="checkbox" id="agree" required>
+                                    <label class="form-check-label small text-muted" for="agree">
+                                        Saya menyatakan bahwa data yang diisi adalah benar, dapur memenuhi standar kesehatan, dan saya bersedia mengikuti prosedur program MBG Nasional.
+                                    </label>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <button type="button" class="btn btn-light px-4 prev-btn" style="border-radius:0.8rem">Kembali</button>
+                                    <button type="submit" class="btn btn-success px-5" style="border-radius:0.8rem">Daftar Sekarang <i class="fas fa-paper-plane ms-2"></i></button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // ==========================================
+    // 1. LOGIKA WIZARD (STEPS)
+    // ==========================================
+    const steps = document.querySelectorAll(".form-step");
+    const nextBtns = document.querySelectorAll(".next-btn");
+    const prevBtns = document.querySelectorAll(".prev-btn");
+    const stepIcons = document.querySelectorAll(".step-wizard-item");
+    let currentStepIdx = 0;
+
+    nextBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+            if (validateStep(currentStepIdx)) {
+                steps[currentStepIdx].classList.remove("active");
+                stepIcons[currentStepIdx].classList.add("active");
+                stepIcons[currentStepIdx].classList.remove("current");
+                
+                currentStepIdx++;
+                
+                steps[currentStepIdx].classList.add("active");
+                stepIcons[currentStepIdx].classList.add("current");
+                
+                // Inisialisasi peta jika masuk ke step 2
+                if(currentStepIdx === 1) {
+                    setTimeout(() => { 
+                        map.invalidateSize(); 
+                        getLocation(); // Deteksi otomatis saat masuk profil dapur
+                    }, 400);
+                }
+            }
+        });
+    });
+
+    prevBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+            steps[currentStepIdx].classList.remove("active");
+            stepIcons[currentStepIdx].classList.remove("current");
+            
+            currentStepIdx--;
+            
+            steps[currentStepIdx].classList.add("active");
+            stepIcons[currentStepIdx].classList.remove("active");
+            stepIcons[currentStepIdx].classList.add("current");
+        });
+    });
+
+    function validateStep(idx) {
+        const inputs = steps[idx].querySelectorAll("input, select, textarea");
+        let isValid = true;
+        inputs.forEach(input => {
+            if (!input.checkValidity()) {
+                input.reportValidity();
+                isValid = false;
+            }
+        });
+        return isValid;
+    }
+
+    // ==========================================
+    // 2. LIHAT PASSWORD
+    // ==========================================
+    function togglePassword(inputId, iconId) {
+        const input = document.getElementById(inputId);
+        const icon = document.getElementById(iconId);
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.replace("fa-eye", "fa-eye-slash");
+        } else {
+            input.type = "password";
+            icon.classList.replace("fa-eye-slash", "fa-eye");
+        }
+    }
+
+    // ==========================================
+    // 3. LOGIKA PETA & GPS (LEAFLET)
+    // ==========================================
+    let map = L.map('map').setView([-6.2088, 106.8456], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OSM'
+    }).addTo(map);
+
+    let marker;
+
+    function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                updateMapMarker(lat, lng, 16);
+            }, (err) => {
+                console.warn("GPS diaktifkan manual atau gagal: " + err.message);
+            });
+        }
+    }
+
+    function updateMapMarker(lat, lng, zoom = null) {
+        const latlng = [lat, lng];
+        if (zoom) map.setView(latlng, zoom);
+        
+        if (marker) {
+            marker.setLatLng(latlng);
+        } else {
+            marker = L.marker(latlng, {draggable: true}).addTo(map);
+            marker.on('dragend', function() {
+                const pos = marker.getLatLng();
+                document.getElementById('latlongInput').value = `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
+            });
+        }
+        document.getElementById('latlongInput').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    }
+
+    map.on('click', function(e) {
+        updateMapMarker(e.latlng.lat, e.latlng.lng);
+    });
+
+    // ==========================================
+    // 4. API WILAYAH INDONESIA
+    // ==========================================
+    const apiBase = "https://www.emsifa.com/api-wilayah-indonesia/api";
+
+    // Load Provinsi
+    fetch(`${apiBase}/provinces.json`)
+        .then(r => r.json())
+        .then(data => {
+            let options = '<option value="" disabled selected>Pilih Provinsi</option>';
+            data.forEach(p => options += `<option value="${p.name}" data-id="${p.id}">${p.name}</option>`);
+            document.getElementById('province').innerHTML = options;
+        });
+
+    // Provinsi -> Kabupaten
+    document.getElementById('province').addEventListener('change', function() {
+        const provId = this.options[this.selectedIndex].getAttribute('data-id');
+        const regSelect = document.getElementById('regency');
+        regSelect.disabled = false;
+        regSelect.innerHTML = '<option>Loading...</option>';
+        
+        fetch(`${apiBase}/regencies/${provId}.json`)
+            .then(r => r.json())
+            .then(data => {
+                let options = '<option value="" disabled selected>Pilih Kabupaten</option>';
+                data.forEach(r => options += `<option value="${r.name}" data-id="${r.id}">${r.name}</option>`);
+                regSelect.innerHTML = options;
+                document.getElementById('district').disabled = true;
+            });
+    });
+
+    // Kabupaten -> Kecamatan
+    document.getElementById('regency').addEventListener('change', function() {
+        const regId = this.options[this.selectedIndex].getAttribute('data-id');
+        const distSelect = document.getElementById('district');
+        distSelect.disabled = false;
+        distSelect.innerHTML = '<option>Loading...</option>';
+        
+        fetch(`${apiBase}/districts/${regId}.json`)
+            .then(r => r.json())
+            .then(data => {
+                let options = '<option value="" disabled selected>Pilih Kecamatan</option>';
+                data.forEach(d => options += `<option value="${d.name}" data-id="${d.id}">${d.name}</option>`);
+                distSelect.innerHTML = options;
+            });
+    });
+</script>
+{% endblock content %}

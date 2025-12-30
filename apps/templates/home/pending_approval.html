@@ -1,0 +1,88 @@
+{% extends "layouts/base-fullscreen.html" %}
+
+{% block title %} Menunggu Verifikasi {% endblock %}
+
+{% block content %}
+
+<!-- ================= HEADER ================= -->
+<div class="header bg-primary py-5">
+    <div class="container text-center">
+        <h1 class="text-white font-weight-bold mb-2">
+            Pendaftaran Berhasil
+        </h1>
+        <p class="text-white-50 mb-0">
+            Akun Anda telah dibuat dan sedang menunggu proses verifikasi
+        </p>
+    </div>
+</div>
+
+<!-- ================= CONTENT ================= -->
+<div class="container mt--5 pb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-7 col-md-9 col-sm-11">
+
+            <div class="card border-0 shadow-lg rounded-lg">
+                <div class="card-body px-5 py-5 text-center">
+
+                    <!-- STATUS -->
+                    <span class="badge badge-warning px-4 py-2 mb-4 d-inline-block"
+                          style="font-size: 0.85rem; letter-spacing: 0.5px;">
+                        STATUS: MENUNGGU PERSETUJUAN
+                    </span>
+
+                    <!-- MESSAGE -->
+                    <p class="mt-3 mb-4" style="font-size: 1.05rem;">
+                        Halo <strong>{{ current_user.fullname or '' }}</strong>,<br>
+                        Data dapur
+                        <strong>{{ current_user.kitchen_name or '—' }}</strong>
+                        telah kami terima dan tercatat di sistem
+                        <strong>MBG Monitor</strong>.
+                    </p>
+
+                    <!-- INFO BOX -->
+                    <div class="p-4 rounded bg-light border mb-4 text-left">
+                        <div class="d-flex align-items-start">
+                            <i class="ni ni-building text-primary mr-3"
+                               style="font-size: 1.6rem;"></i>
+                            <div>
+                                <strong>
+                                    Admin Gizi Kecamatan
+                                    {{ current_user.district or '—' }}
+                                </strong>
+                                <div class="text-muted mt-1">
+                                    sedang melakukan peninjauan lokasi dan
+                                    kelengkapan berkas Anda.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- NOTE -->
+                    <p class="text-muted text-sm mb-4">
+                        Proses verifikasi maksimal
+                        <strong>2×24 jam kerja</strong>.
+                        Jika belum ada perubahan status,
+                        silakan hubungi Admin Kecamatan.
+                    </p>
+
+                    <!-- ACTION BUTTONS -->
+                    <!-- <div class="d-flex justify-content-center">
+                        <a href="{{ url_for('home_blueprint.index') }}"
+                           class="btn btn-primary px-4 mr-2">
+                            Cek Status
+                        </a>
+
+                        <a href="{{ url_for('authentication_blueprint.logout') }}"
+                           class="btn btn-outline-danger px-4">
+                            Logout
+                        </a>
+                    </div> -->
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% endblock %}

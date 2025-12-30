@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Informasi MBG - Makan Bergizi Gratis</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <style>
+        /* --- PALET WARNA BIRU MUDA --- */
+        :root {
+            --primary: #4A90E2;       /* Light Blue */
+            --primary-dark: #357ABD;  /* Darker Blue */
+            --bg-cream: #F9FAFB;      /* Off-white */
+            --bg-soft-blue: #F0F7FF;  /* Very Pale Blue */
+            --text-dark: #2D3748;
+            --text-light: #718096;
+            --accent: #F6AD55;        /* Orange */
+            --white: #ffffff;
+            --shadow-soft: 0 10px 40px -10px rgba(74, 144, 226, 0.15);
+            --radius-lg: 24px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background-color: var(--bg-cream); color: var(--text-dark); line-height: 1.7; overflow-x: hidden; }
+        a { text-decoration: none; color: inherit; transition: 0.3s; }
+        ul { list-style: none; }
+        button { border: none; outline: none; }
+
+        .container {
+            width: 88%;
+            max-width: 1150px;
+            margin: 0 auto;
+        }
+
+        /* --- NAVBAR --- */
+        .navbar {
+            position: fixed;
+            top: 0; left: 0; width: 100%;
+            padding: 15px 0;
+            background: rgba(255, 255, 255, 0.95); /* Lebih solid agar tidak transparan berlebih */
+            backdrop-filter: blur(12px);
+            z-index: 1000;
+            border-bottom: 1px solid rgba(74, 144, 226, 0.1);
+            height: 80px; /* Tinggi pasti untuk kalkulasi layout */
+            display: flex; align-items: center;
+        }
+
+        .navbar .container { display: flex; justify-content: space-between; align-items: center; }
+
+        .logo { font-size: 1.5rem; font-weight: 800; display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text-dark); cursor: pointer; }
+        .logo span { color: var(--primary); font-size: 1.6rem; } /* Icon daun biru/hijau */
+        
+        .nav-menu { display: flex; gap: 30px; align-items: center; }
+        .nav-link { font-size: 0.95rem; font-weight: 600; color: var(--text-dark); }
+        .nav-link:hover { color: var(--primary); }
+
+        .auth-buttons { display: flex; gap: 12px; align-items: center; }
+        .btn-auth { padding: 10px 24px; border-radius: 50px; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease; cursor: pointer; text-align: center; }
+        .btn-login-outline { background-color: transparent; color: var(--primary); border: 1.5px solid var(--primary); }
+        .btn-login-outline:hover { background-color: var(--primary); color: var(--white); transform: translateY(-2px); }
+        .btn-register-solid { background-color: var(--primary); color: var(--white); border: 1.5px solid var(--primary); box-shadow: 0 4px 15px rgba(74, 144, 226, 0.25); }
+        .btn-register-solid:hover { background-color: var(--primary-dark); border-color: var(--primary-dark); transform: translateY(-2px); }
+
+        /* --- HERO SECTION (PERBAIKAN TATA LETAK) --- */
+        .hero {
+            position: relative;
+            height: 100vh;
+            min-height: 750px; /* Sedikit ditambah agar lega */
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            /* Padding top ditambah agar konten tidak tertabrak navbar di layar pendek */
+            padding-top: 80px; 
+        }
+
+        .hero-background {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
+        }
+
+        .hero-bg-image {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; opacity: 0; transition: opacity 1.5s ease-in-out;
+        }
+        .hero-bg-image.active { opacity: 1; }
+
+        .hero-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2;
+            /* Gradient diperbaiki: Lebih solid di kiri agar teks terbaca, fading halus ke kanan */
+            background: linear-gradient(90deg, 
+                rgba(249, 250, 251, 1) 0%, 
+                rgba(249, 250, 251, 0.95) 35%, 
+                rgba(249, 250, 251, 0.7) 60%, 
+                rgba(249, 250, 251, 0.1) 100%);
+        }
+
+        .hero-content {
+            position: relative; z-index: 10;
+            width: 100%; height: 100%;
+            display: flex; align-items: center; /* Vertikal Center */
+        }
+
+        .hero-left {
+            max-width: 650px; /* Dibatasi agar tidak terlalu lebar */
+            animation: slideInUp 1.0s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .hero-title {
+            font-size: 4rem; /* Diperbesar */
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            letter-spacing: -2px;
+            color: var(--text-dark);
+        }
+
+        .hero-subtitle { color: var(--primary); display: block; margin-top: 10px; }
+
+        .hero-description {
+            font-size: 1.25rem;
+            color: var(--text-light);
+            line-height: 1.6;
+            margin-bottom: 40px;
+            max-width: 90%;
+        }
+
+        .hero-actions { display: flex; gap: 16px; margin-bottom: 48px; }
+
+        .cta-button {
+            padding: 16px 36px;
+            font-size: 1rem; font-weight: 700; border-radius: 50px;
+            cursor: pointer; display: flex; align-items: center; gap: 10px;
+            transition: all 0.3s;
+        }
+        .cta-button.primary { background: var(--primary); color: var(--white); box-shadow: 0 10px 25px -5px rgba(74, 144, 226, 0.5); }
+        .cta-button.primary:hover { transform: translateY(-3px); background: var(--primary-dark); box-shadow: 0 15px 30px -5px rgba(74, 144, 226, 0.6); }
+
+        .hero-stats {
+            display: flex; gap: 60px;
+            border-top: 1px solid rgba(74, 144, 226, 0.2);
+            padding-top: 30px;
+        }
+        .stat-number { display: block; font-size: 2rem; font-weight: 800; color: var(--primary); line-height: 1; margin-bottom: 5px; }
+        .stat-label { font-size: 0.85rem; color: var(--text-light); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .slide-indicators {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 10px; z-index: 20;
+            background: rgba(255, 255, 255, 0.8); padding: 8px 16px; border-radius: 30px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        .indicator { width: 10px; height: 10px; border-radius: 50%; background: #CBD5E0; cursor: pointer; transition: 0.3s; }
+        .indicator.active { background: var(--primary); width: 25px; border-radius: 10px; }
+
+        /* --- SECTIONS UMUM --- */
+        section { padding: 100px 0; }
+        .section-header { text-align: center; margin-bottom: 60px; max-width: 700px; margin: 0 auto 60px; }
+        .section-title { font-size: 2.5rem; font-weight: 800; margin-bottom: 10px; color: var(--text-dark); }
+        .section-subtitle { color: var(--text-light); font-size: 1.1rem; }
+
+        /* Cards Styling (Sama seperti sebelumnya) */
+        .category-card, .product-card, .service-card { background: var(--white); border-radius: var(--radius-lg); overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03); transition: all 0.4s; }
+        .category-card:hover, .product-card:hover { transform: translateY(-10px); box-shadow: var(--shadow-soft); }
+        .categories-grid, .products-grid, .services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+        .category-image, .product-image { height: 220px; overflow: hidden; position: relative; }
+        .category-image img, .product-image img { width: 100%; height: 100%; object-fit: cover; transition: 0.6s; }
+        .category-card:hover img { transform: scale(1.08); }
+        .category-content, .product-content, .service-card { padding: 25px; }
+        .category-title, .product-title { font-size: 1.25rem; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; }
+        .category-description, .product-description { color: var(--text-light); font-size: 0.95rem; line-height: 1.6; margin-bottom: 15px; }
+        .category-count { color: var(--primary); font-weight: 700; font-size: 0.9rem; }
+        
+        .nutrition-badge { position: absolute; top: 15px; left: 15px; background: rgba(246, 173, 85, 0.95); color: white; padding: 5px 12px; border-radius: 20px; font-weight: 700; font-size: 0.75rem; }
+        .product-price { color: var(--accent); font-weight: 700; background: rgba(246, 173, 85, 0.1); padding: 5px 12px; border-radius: 10px; width: fit-content; margin-bottom: 15px; font-size: 0.9rem; }
+        .add-to-cart-btn { width: 100%; padding: 10px; border: 2px solid var(--primary); color: var(--primary); background: transparent; border-radius: 50px; font-weight: 700; cursor: pointer; transition: 0.3s; }
+        .add-to-cart-btn:hover { background: var(--primary); color: white; }
+        .service-icon { width: 60px; height: 60px; background: var(--bg-soft-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary); margin-bottom: 20px; }
+
+        @keyframes slideInUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- RESPONSIVE MOBILE FIX --- */
+        @media (max-width: 991px) {
+            .nav-menu { display: none; } /* Hide menu di mobile sementara */
+            
+            /* Fix Hero di Mobile: Jadi Rata Tengah */
+            .hero { height: auto; padding-top: 120px; padding-bottom: 80px; text-align: center; }
+            .hero-overlay { background: rgba(249, 250, 251, 0.92); } /* Overlay lebih solid di HP */
+            .hero-content { justify-content: center; }
+            .hero-title { font-size: 2.8rem; letter-spacing: -1px; }
+            .hero-description { margin: 0 auto 30px auto; }
+            .hero-actions { justify-content: center; }
+            .hero-stats { justify-content: center; gap: 30px; flex-wrap: wrap; }
+            .stat-number { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="logo">
+                <span>🌿</span> MBG Monitor
+            </a>
+
+            <ul class="nav-menu">
+                <li><a href="#hero" class="nav-link">Beranda</a></li>
+                <li><a href="#program" class="nav-link">Program</a></li>
+                <li><a href="#menu" class="nav-link">Menu Sehat</a></li>
+                <li><a href="#contact" class="nav-link">Kontak</a></li>
+            </ul>
+
+            <div class="auth-buttons">
+                <a href="{{ url_for('authentication_blueprint.login') }}" class="btn-auth btn-login-outline">Masuk</a>
+                <a href="{{ url_for('authentication_blueprint.register') }}" class="btn-auth btn-register-solid">Daftar</a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero" id="hero">
+        <div class="hero-background">
+            <img src="https://images.pexels.com/photos/860227/pexels-photo-860227.jpeg?auto=compress&cs=tinysrgb&w=1600" class="hero-bg-image active" alt="Slide 1">
+            <img src="https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=1600" class="hero-bg-image" alt="Slide 2">
+            <img src="https://images.pexels.com/photos/2284166/pexels-photo-2284166.jpeg?auto=compress&cs=tinysrgb&w=1600" class="hero-bg-image" alt="Slide 3">
+            <div class="hero-overlay"></div>
+        </div>
+
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-left">
+                    <h1 class="hero-title">
+                        Masa Depan Cerah<br>
+                        <span class="hero-subtitle">Dimulai dari Gizi.</span>
+                    </h1>
+
+                    <p class="hero-description">
+                        Kami berkomitmen memastikan setiap anak mendapatkan haknya atas makanan bergizi, demi tumbuh kembang yang optimal dan generasi yang lebih sehat.
+                    </p>
+
+                    <div class="hero-actions">
+                        <button class="cta-button primary" onclick="document.getElementById('menu').scrollIntoView({behavior: 'smooth'})">
+                            Lihat Standar Menu
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12H19M19 12L12 5M19 12L12 19"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="hero-stats">
+                        <div class="stat-item">
+                            <span class="stat-number">2 Jt+</span>
+                            <span class="stat-label">Anak Terlayani</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">5K+</span>
+                            <span class="stat-label">Dapur Sehat</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">100%</span>
+                            <span class="stat-label">Pangan Lokal</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-indicators">
+                <button class="indicator active" onclick="goToSlide(0)"></button>
+                <button class="indicator" onclick="goToSlide(1)"></button>
+                <button class="indicator" onclick="goToSlide(2)"></button>
+            </div>
+        </div>
+    </section>
+
+    <section class="categories-section" id="program">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Fokus Program</h2>
+                <p class="section-subtitle">Menjangkau mereka yang paling membutuhkan.</p>
+            </div>
+            <div class="categories-grid">
+                <div class="category-card">
+                    <div class="category-image"><img src="https://images.pexels.com/photos/5212345/pexels-photo-5212345.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Siswa"></div>
+                    <div class="category-content">
+                        <h3 class="category-title">Peserta Didik</h3>
+                        <p class="category-description">Mendukung konsentrasi belajar siswa PAUD hingga menengah.</p>
+                        <span class="category-count">Prioritas Utama &rarr;</span>
+                    </div>
+                </div>
+                <div class="category-card">
+                    <div class="category-image"><img src="https://images.pexels.com/photos/3662828/pexels-photo-3662828.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Balita"></div>
+                    <div class="category-content">
+                        <h3 class="category-title">Cegah Stunting</h3>
+                        <p class="category-description">Intervensi gizi spesifik untuk balita demi pertumbuhan optimal.</p>
+                        <span class="category-count">Perhatian Khusus &rarr;</span>
+                    </div>
+                </div>
+                <div class="category-card">
+                    <div class="category-image"><img src="https://images.pexels.com/photos/3951623/pexels-photo-3951623.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Ibu Hamil"></div>
+                    <div class="category-content">
+                        <h3 class="category-title">Ibu Hamil</h3>
+                        <p class="category-description">Memastikan kesehatan ibu dan janin dengan nutrisi cukup.</p>
+                        <span class="category-count">Kesehatan Ibu & Anak &rarr;</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="featured-products" id="menu" style="background: var(--bg-soft-blue);">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Inspirasi Menu</h2>
+                <p class="section-subtitle">Menu sehat, lezat, dan bergizi seimbang.</p>
+            </div>
+            <div class="products-grid">
+                <div class="product-card">
+                    <div class="product-image">
+                        <div class="nutrition-badge">Protein Hewani</div>
+                        <img src="https://images.pexels.com/photos/675951/pexels-photo-675951.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Ayam">
+                    </div>
+                    <div class="product-content">
+                        <h3 class="product-title">Nasi Ayam Teriyaki</h3>
+                        <p class="product-description">Lengkap dengan sayuran segar dan buah.</p>
+                        <div class="product-price">~650 Kkal</div>
+                        <button class="add-to-cart-btn">Detail Gizi</button>
+                    </div>
+                </div>
+                 <div class="product-card">
+                    <div class="product-image">
+                        <div class="nutrition-badge">Omega-3</div>
+                        <img src="https://images.pexels.com/photos/1640772/pexels-photo-1640772.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Ikan">
+                    </div>
+                    <div class="product-content">
+                        <h3 class="product-title">Ikan Bumbu Kuning</h3>
+                        <p class="product-description">Ikan lokal kaya nutrisi untuk otak.</p>
+                        <div class="product-price">~600 Kkal</div>
+                        <button class="add-to-cart-btn">Detail Gizi</button>
+                    </div>
+                </div>
+                 <div class="product-card">
+                    <div class="product-image">
+                        <div class="nutrition-badge">Vitamin</div>
+                        <img src="https://images.pexels.com/photos/1099680/pexels-photo-1099680.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Buah">
+                    </div>
+                    <div class="product-content">
+                        <h3 class="product-title">Buah Potong Segar</h3>
+                        <p class="product-description">Buah lokal musiman yang manis dan segar.</p>
+                        <div class="product-price">~150 Kkal</div>
+                        <button class="add-to-cart-btn">Detail Gizi</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer style="background: var(--bg-cream); color: var(--text-dark); padding: 60px 0; text-align: center; border-top: 1px solid rgba(0,0,0,0.05);">
+        <div class="container">
+            <h3 style="color: var(--text-dark); margin-bottom: 20px;">🌿 MBG Monitor</h3>
+            <p style="color: var(--text-light); margin-bottom: 30px;">Portal Resmi Program Makan Bergizi Gratis.</p>
+            <p style="font-size: 0.9rem; color: #A0AEC0;">&copy; 2025 Badan Gizi Nasional.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const slides = document.querySelectorAll('.hero-bg-image');
+            const indicators = document.querySelectorAll('.indicator');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+            let slideInterval;
+
+            function showSlide(index) {
+                slides.forEach(slide => slide.classList.remove('active'));
+                indicators.forEach(ind => ind.classList.remove('active'));
+
+                if (index >= totalSlides) currentSlide = 0;
+                else if (index < 0) currentSlide = totalSlides - 1;
+                else currentSlide = index;
+
+                slides[currentSlide].classList.add('active');
+                indicators[currentSlide].classList.add('active');
+            }
+
+            window.goToSlide = function (index) {
+                showSlide(index);
+                resetTimer();
+            };
+
+            function startTimer() {
+                slideInterval = setInterval(() => {
+                    showSlide(currentSlide + 1);
+                }, 5000);
+            }
+
+            function resetTimer() {
+                clearInterval(slideInterval);
+                startTimer();
+            }
+
+            startTimer();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Live Monitoring Gizi {% endblock title %}
+
+{% block content %}
+
+<div class="header bg-primary pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6 col-7">
+                    <h6 class="h2 text-white d-inline-block mb-0">Live Monitoring</h6>
+                    <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+                        <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+                            <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Pantauan Aktivitas Dapur</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt--6">
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header border-0">
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <h3 class="mb-0">Aktivitas Masuk (Real-time)</h3>
+                        </div>
+                        <div class="col-md-8 text-right">
+                            <form class="form-inline float-right">
+                                <select class="form-control form-control-sm mr-2">
+                                    <option>Semua Dapur</option>
+                                    <option>Dapur Tegal Selatan</option>
+                                    <option>Dapur Margadana</option>
+                                </select>
+                                <select class="form-control form-control-sm mr-2">
+                                    <option>Semua Tahapan</option>
+                                    <option>Persiapan</option>
+                                    <option>Memasak</option>
+                                    <option>Packing</option>
+                                </select>
+                                <button type="button" class="btn btn-sm btn-primary">Filter</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table align-items-center table-flush">
+                        <thead class="thead-light">
+                            <tr>
+                                <th scope="col">Waktu</th>
+                                <th scope="col">Nama Dapur</th>
+                                <th scope="col">Tahapan</th>
+                                <th scope="col">Bukti Foto</th>
+                                <th scope="col">Status QC</th>
+                                <th scope="col">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in activities %}
+                            <tr>
+                                <td class="text-muted font-weight-bold">
+                                    {{ item.waktu }}
+                                </td>
+                                <td>
+                                    <div class="media align-items-center">
+                                        <div class="avatar avatar-sm rounded-circle mr-3 bg-gradient-info text-white">
+                                            {{ item.inisial }}
+                                        </div>
+                                        <div class="media-body">
+                                            <span class="name mb-0 text-sm font-weight-bold text-dark">{{ item.nama_dapur }}</span>
+                                            <br>
+                                            <small class="text-muted">{{ item.alamat }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if item.tahap == 'Memasak' %}
+                                        <span class="badge badge-dot"><i class="bg-warning"></i> Memasak</span>
+                                    {% elif item.tahap == 'Packing' %}
+                                        <span class="badge badge-dot"><i class="bg-info"></i> Packing</span>
+                                    {% else %}
+                                        <span class="badge badge-dot"><i class="bg-primary"></i> Persiapan</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            onclick="lihatBukti('{{ item.img_url }}', '{{ item.nama_dapur }}', '{{ item.tahap }}')">
+                                        <i class="fas fa-camera"></i> Lihat
+                                    </button>
+                                </td>
+                                <td>
+                                    {% if item.status == 'pending' %}
+                                        <span class="badge badge-warning">Perlu Cek</span>
+                                    {% elif item.status == 'approved' %}
+                                        <span class="badge badge-success">Valid</span>
+                                    {% else %}
+                                        <span class="badge badge-danger">Isu/Ditolak</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.status == 'pending' %}
+                                        <button class="btn btn-sm btn-success" title="Approve"><i class="fas fa-check"></i></button>
+                                        <button class="btn btn-sm btn-danger" title="Reject"><i class="fas fa-times"></i></button>
+                                    {% else %}
+                                        <span class="text-muted text-sm"><i class="fas fa-lock"></i> Selesai</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card-footer py-4">
+                    <nav aria-label="...">
+                        <ul class="pagination justify-content-end mb-0">
+                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item"><a class="page-link" href="#">2</a></li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include "includes/footer.html" %}
+</div>
+
+<div class="modal fade" id="modalBukti" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Bukti Aktivitas</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body text-center bg-secondary">
+                <img id="imgPreview" src="" class="img-fluid rounded shadow" style="max-height: 500px; width: auto;">
+                <h3 class="mt-3 text-dark" id="modalTitle">-</h3>
+                <p id="modalSubtitle" class="text-muted mb-0">-</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+    function lihatBukti(url, dapur, tahap) {
+        // Ganti gambar dengan placeholder jika url kosong
+        if(!url) url = "https://via.placeholder.com/800x600?text=Contoh+Foto+Masakan";
+        
+        document.getElementById('imgPreview').src = url;
+        document.getElementById('modalTitle').innerText = dapur;
+        document.getElementById('modalSubtitle').innerText = "Sedang dalam proses: " + tahap;
+        $('#modalBukti').modal('show');
+    }
+</script>
+{% endblock javascripts %}

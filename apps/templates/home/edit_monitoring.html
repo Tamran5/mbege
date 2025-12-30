@@ -1,0 +1,222 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Edit Aktivitas {% endblock title %}
+
+{% block stylesheets %}
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    /* --- REUSE VARIABLES (Agar konsisten dengan dashboard) --- */
+    :root {
+      --primary: #3b82f6;
+      --primary-dark: #2563eb;
+      --danger: #ef4444; /* Merah untuk Hapus */
+      --danger-dark: #dc2626;
+      --bg-surface: #f8fafc;
+      --bg-card: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --radius: 12px;
+    }
+
+    body { font-family: 'Inter', sans-serif; background-color: var(--bg-surface); color: var(--text-main); }
+
+    /* Layout Khusus Halaman Edit (Lebih sempit/fokus) */
+    .edit-container {
+      max-width: 600px; /* Fokus di tengah */
+      margin: 3rem auto;
+      padding: 0 1rem;
+    }
+
+    /* Breadcrumb Navigasi */
+    .breadcrumb {
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+    .breadcrumb a { color: var(--primary); text-decoration: none; font-weight: 500; }
+    .breadcrumb i { margin: 0 8px; font-size: 0.8rem; }
+
+    /* Card Styling */
+    .edit-card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      background: #fdfdfd;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .card-title { font-size: 1.25rem; font-weight: 700; margin: 0; }
+    .card-id { font-size: 0.85rem; color: var(--text-muted); background: #f1f5f9; padding: 4px 8px; border-radius: 6px; }
+
+    .card-body { padding: 2rem; }
+
+    /* Form Elements */
+    .form-group { margin-bottom: 1.5rem; }
+    label { display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-main); }
+    
+    .form-control {
+      width: 100%; padding: 0.75rem 1rem;
+      border: 1px solid var(--border-color); border-radius: 8px;
+      font-family: inherit; font-size: 0.95rem;
+      transition: all 0.2s;
+    }
+    .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+
+    /* Image Preview Area */
+    .current-image-wrapper {
+      position: relative;
+      width: 100%;
+      height: 200px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      margin-bottom: 1rem;
+      background: #f1f5f9;
+    }
+    .current-image-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+    .image-badge {
+      position: absolute; top: 10px; left: 10px;
+      background: rgba(0,0,0,0.6); color: white;
+      padding: 4px 10px; border-radius: 4px; font-size: 0.75rem;
+    }
+
+    /* Footer Buttons Action */
+    .card-footer {
+      padding: 1.5rem;
+      background: #f8fafc;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between; /* Pisahkan Delete dan Save */
+      align-items: center;
+    }
+
+    .btn { padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; font-size: 0.95rem; text-decoration: none;}
+    
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    
+    .btn-secondary { background: white; border: 1px solid var(--border-color); color: var(--text-main); }
+    .btn-secondary:hover { background: #f1f5f9; }
+
+    .btn-danger { background: white; border: 1px solid #fca5a5; color: var(--danger); }
+    .btn-danger:hover { background: #fef2f2; border-color: var(--danger); }
+
+  </style>
+{% endblock stylesheets %}
+
+{% block content %}
+
+<div class="edit-container">
+  
+  <div class="breadcrumb">
+    <a href="/index">Dashboard</a> 
+    <i class="fa-solid fa-chevron-right"></i> 
+    <span>Edit Aktivitas</span>
+  </div>
+
+  <form method="POST" action="" enctype="multipart/form-data"> <div class="edit-card">
+      
+      <div class="card-header">
+        <h1 class="card-title">Edit Data Dapur</h1>
+        <span class="card-id">#ID-2849</span>
+      </div>
+
+      <div class="card-body">
+        
+        <div class="form-group">
+          <label>Waktu Pelaksanaan</label>
+          <input type="time" name="time" class="form-control" value="07:30" required>
+        </div>
+
+        <div class="form-group">
+          <label>Tahapan Proses</label>
+          <select name="process" class="form-control">
+            <option value="Persiapan Bahan" selected>Persiapan Bahan</option>
+            <option value="Pengolahan/Memasak">Pengolahan/Memasak</option>
+            <option value="Quality Control">Quality Control (AI Scan)</option>
+            <option value="Pengemasan">Pengemasan</option>
+            <option value="Distribusi">Distribusi</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Status Saat Ini</label>
+          <select name="status" class="form-control">
+            <option value="Proses">Sedang Proses</option>
+            <option value="Selesai" selected>Selesai</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Bukti Dokumentasi</label>
+          
+          <div class="current-image-wrapper">
+            <span class="image-badge">Gambar Saat Ini</span>
+            <img src="https://via.placeholder.com/600x300?text=Foto+Masakan+Lama" alt="Current Image" id="imgPreview">
+          </div>
+
+          <input type="file" name="image" class="form-control" accept="image/*" onchange="previewNewImage(this)">
+          <small style="color: var(--text-muted); margin-top: 5px; display:block;">Biarkan kosong jika tidak ingin mengubah foto.</small>
+        </div>
+
+      </div>
+
+      <div class="card-footer">
+        <button type="button" class="btn btn-danger" onclick="confirmDelete()">
+          <i class="fa-regular fa-trash-can"></i> Hapus Data
+        </button>
+
+        <div style="display: flex; gap: 10px;">
+          <a href="/dashboard" class="btn btn-secondary">Batal</a>
+          <button type="submit" class="btn btn-primary">
+            <i class="fa-regular fa-floppy-disk"></i> Simpan Perubahan
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </form>
+</div>
+
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+  // Script Preview Gambar Baru saat Upload
+  function previewNewImage(input) {
+    const imgPreview = document.getElementById('imgPreview');
+    const badge = document.querySelector('.image-badge');
+
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        imgPreview.src = e.target.result;
+        badge.innerText = "Preview Gambar Baru";
+        badge.style.background = "#3b82f6"; // Ubah warna badge jadi biru
+      }
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  // Konfirmasi Hapus
+  function confirmDelete() {
+    if(confirm("PERINGATAN: Apakah Anda yakin ingin menghapus data ini secara permanen?")) {
+      // Logika penghapusan, bisa submit form ke route delete atau redirect
+      alert("Data dihapus (Simulasi)");
+      window.location.href = "/dashboard";
+    }
+  }
+</script>
+{% endblock javascripts %}

@@ -1,0 +1,212 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Database Penerima Manfaat {% endblock title %}
+
+{% block stylesheets %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/assets/css/penerima.css">
+{% endblock stylesheets %}
+
+{% block content %}
+
+<div class="header bg-primary pb-6">
+  <div class="container-fluid">
+    <div class="header-body">
+      <div class="row align-items-center py-4">
+        <div class="col-lg-6 col-7">
+          <h6 class="h2 text-white d-inline-block mb-0">Database Penerima</h6>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-xl-3 col-md-6">
+          <div class="card card-stats">
+            <div class="card-body">
+              <div class="row">
+                <div class="col">
+                    <h5 class="card-title text-uppercase text-muted mb-0">Total Lokasi</h5>
+                    <span class="h2 font-weight-bold mb-0" id="stat-total">0</span>
+                </div>
+                <div class="col-auto">
+                    <div class="icon icon-shape bg-gradient-red text-white rounded-circle shadow">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-stats">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col">
+                      <h5 class="card-title text-uppercase text-muted mb-0">Sekolah</h5>
+                      <span class="h2 font-weight-bold mb-0" id="stat-sekolah">0</span>
+                  </div>
+                  <div class="col-auto">
+                      <div class="icon icon-shape bg-gradient-orange text-white rounded-circle shadow">
+                          <i class="fas fa-school"></i>
+                      </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-3 col-md-6">
+            <div class="card card-stats">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col">
+                      <h5 class="card-title text-uppercase text-muted mb-0">Rentan / Lansia</h5>
+                      <span class="h2 font-weight-bold mb-0" id="stat-rentan">0</span>
+                  </div>
+                  <div class="col-auto">
+                      <div class="icon icon-shape bg-gradient-green text-white rounded-circle shadow">
+                          <i class="fas fa-heartbeat"></i>
+                      </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-3 col-md-6">
+            <div class="card card-stats">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col">
+                      <h5 class="card-title text-uppercase text-muted mb-0">Total Porsi</h5>
+                      <span class="h2 font-weight-bold mb-0" id="stat-porsi">0</span>
+                  </div>
+                  <div class="col-auto">
+                      <div class="icon icon-shape bg-gradient-info text-white rounded-circle shadow">
+                          <i class="fas fa-utensils"></i>
+                      </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt--6">
+  <div class="row">
+
+    <div class="col-xl-4 order-xl-2">
+      <div class="card">
+        <div class="card-header">
+          <div class="row align-items-center">
+            <div class="col-8">
+              <h3 class="mb-0" id="formTitle">Form Penerima</h3>
+            </div>
+            <div class="col-4 text-right">
+              <button type="button" class="btn btn-sm btn-secondary" onclick="resetForm()">Reset</button>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <form id="penerimaForm">
+            <input type="hidden" id="editId">
+            <div class="pl-lg-1">
+              
+              <div class="form-group">
+                <label class="form-control-label">Kategori</label>
+                <select id="inputCategory" class="form-control" required>
+                  <option value="SD">SD (Sekolah Dasar)</option>
+                  <option value="SMP">SMP</option>
+                  <option value="SMA">SMA</option>
+                  <option value="Balita">Balita (Posyandu)</option>
+                  <option value="Ibu Hamil">Ibu Hamil</option>
+                  <option value="Lansia">Lansia</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-control-label">Nama Lokasi</label>
+                <input type="text" id="inputName" class="form-control" placeholder="Contoh: Panti Wreda Sejahtera" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-control-label">Alamat / Wilayah</label>
+                <input type="text" id="inputLocation" class="form-control" placeholder="Kecamatan / Desa">
+              </div>
+
+              <div class="form-group">
+                <label class="form-control-label">Kuota (Porsi)</label>
+                <input type="number" id="inputCount" class="form-control" placeholder="0" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-control-label">Nama PIC</label>
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                  </div>
+                  <input type="text" id="inputPIC" class="form-control" placeholder="Nama Penanggung Jawab">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-control-label">No. Telepon / WA</label>
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                    </div>
+                    <input type="text" id="inputPhone" class="form-control" placeholder="Contoh: 0812..." pattern="[0-9]+">
+                </div>
+              </div>
+
+              <div class="text-center">
+                <button type="submit" class="btn btn-primary my-2 btn-block">Simpan Data</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-8 order-xl-1">
+      <div class="card">
+        <div class="card-header border-0">
+          <div class="row align-items-center">
+            <div class="col">
+              <h3 class="mb-0">Daftar Lokasi MBG</h3>
+            </div>
+            <div class="col text-right">
+              <div class="input-group input-group-alternative input-group-sm w-50 ml-auto">
+                <div class="input-group-prepend">
+                  <span class="input-group-text"><i class="fas fa-search"></i></span>
+                </div>
+                <input id="searchInput" class="form-control" placeholder="Cari lokasi..." type="text">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table align-items-center table-flush">
+            <thead class="thead-light">
+              <tr>
+                <th scope="col">Nama Lokasi</th>
+                <th scope="col">Kategori</th>
+                <th scope="col" class="text-center">Kuota</th> <th scope="col">PIC & Kontak</th> <th scope="col" class="text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="penerimaTableBody">
+                </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  {% include "includes/footer.html" %}
+</div>
+
+{% endblock content %}
+
+{% block javascripts %}
+<script src="/static/assets/js/penerima.js"></script>
+{% endblock javascripts %}

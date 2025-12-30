@@ -1,0 +1,362 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Verifikasi Mitra Dapur {% endblock title %}
+
+{% block stylesheets %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/assets/css/tim_dapur.css">
+{% endblock stylesheets %}
+
+{% block content %}
+
+<div class="header bg-primary pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6 col-7">
+                    <h6 class="h2 text-white d-inline-block mb-0">Verifikasi Mitra</h6>
+                    <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+                        <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+                            <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
+                            <li class="breadcrumb-item"><a href="#">Admin Gizi</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Verifikasi Dapur</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card-stats">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col">
+                                    <h5 class="card-title text-uppercase text-muted mb-0">Menunggu</h5>
+                                    <span class="h2 font-weight-bold mb-0">{{ pendaftar|length }}</span>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="icon icon-shape bg-gradient-warning text-white rounded-circle shadow">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt--6">
+    <div class="row">
+
+        <div class="col-xl-5 order-xl-2">
+            <div class="card bg-secondary shadow">
+                <div class="card-header bg-white border-0">
+                    <div class="row align-items-center">
+                        <div class="col-8">
+                            <h3 class="mb-0" id="detailTitle">Detail Mitra</h3>
+                        </div>
+                        <div class="col-4 text-right">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="resetDetail()">Tutup</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form id="verificationForm">
+                        <input type="hidden" id="userId" name="id">
+
+                        <div class="text-center mb-4">
+                            <h3 class="mb-0" id="dispKitchenName">Pilih Data Dulu</h3>
+
+                            <div class="h5 font-weight-300 mt-2">
+                                <i class="ni location_pin mr-2"></i>
+                                <span id="dispDistrict" class="font-weight-bold">-</span>,
+                                <span id="dispRegency">-</span>
+                            </div>
+                            <div class="small text-muted mb-2">
+                                Prov. <span id="dispProvince">-</span>
+                            </div>
+
+                            <div class="h5 mt-2">
+                                <i class="ni business_briefcase-24 mr-2"></i><span id="dispFullname">-</span>
+                            </div>
+                            <div>
+                                <i class="ni education_hat mr-2"></i>NIK: <span id="dispNik">-</span>
+                            </div>
+                            <div>
+                                <i class="fab fa-whatsapp mr-2 text-success"></i><span id="dispWa">-</span>
+                            </div>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <h6 class="heading-small text-muted mb-4">Dokumen Persyaratan</h6>
+
+                        <div class="form-group">
+                            <label class="form-control-label">File KTP</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="dispFileKtpName" value="Belum ada file"
+                                    readonly>
+                                <div class="input-group-append">
+                                    <a id="linkFileKtp" href="#" target="_blank" class="btn btn-primary disabled-link">
+                                        <i class="fas fa-eye"></i> Lihat
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-control-label">Sertifikat Laik Higiene (SLHS)</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="dispFileSlhsName" value="Belum ada file"
+                                    readonly>
+                                <div class="input-group-append">
+                                    <a id="linkFileSlhs" href="#" target="_blank" class="btn btn-primary disabled-link">
+                                        <i class="fas fa-eye"></i> Lihat
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-control-label">Foto Kondisi Dapur</label>
+                            <div class="card border-0">
+                                <img id="imgKitchen" src="/static/assets/img/theme/sketch.jpg" class="card-img-top"
+                                    alt="Foto Dapur" style="max-height: 200px; object-fit: cover;">
+                                <div class="card-body py-2 text-center">
+                                    <a id="linkFileKitchen" href="#" target="_blank"
+                                        class="btn btn-sm btn-outline-primary">Perbesar Foto</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-control-label">Alamat Lengkap</label>
+                            <textarea class="form-control" id="dispAddress" rows="2" readonly></textarea>
+                            <small class="text-muted" id="dispCoordinates">Koord: -</small>
+                        </div>
+
+                        <div class="row mt-4" id="actionButtons" style="display: none;">
+                            <div class="col-6">
+                                <button type="button" class="btn btn-outline-danger btn-block"
+                                    onclick="updateStatus('reject')">
+                                    <i class="fas fa-times mr-1"></i> Tolak
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button type="button" class="btn btn-success btn-block"
+                                    onclick="updateStatus('approve')">
+                                    <i class="fas fa-check mr-1"></i> Setujui
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-7 order-xl-1">
+            <div class="card">
+                <div class="card-header border-0">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h3 class="mb-0">Antrian Verifikasi</h3>
+                            {% if msg %}
+                            <small class="text-muted">{{ msg }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-items-center table-flush">
+                        <thead class="thead-light">
+                            <tr>
+                                <th scope="col">Dapur & Pemilik</th>
+                                <th scope="col">Tipe</th>
+                                <th scope="col">Lokasi (Kec)</th>
+                                <th scope="col">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="list">
+                            {% for user in pendaftar %}
+                            <tr>
+                                <th scope="row">
+                                    <div class="media align-items-center">
+                                        <div class="media-body">
+                                            <span class="name mb-0 text-sm font-weight-bold">{{ user.kitchen_name
+                                                }}</span>
+                                            <br>
+                                            <small class="text-muted">{{ user.fullname }}</small>
+                                        </div>
+                                    </div>
+                                </th>
+                                <td>
+                                    <span class="badge badge-dot mr-4">
+                                        <i class="bg-info"></i> {{ user.mitra_type|upper }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {{ user.district }}
+                                </td>
+                                <td>
+                                    {% set user_data = {
+                                    'id': user.id,
+                                    'kitchen_name': user.kitchen_name or "",
+                                    'fullname': user.fullname or "",
+                                    'nik': user.nik or "",
+                                    'whatsapp': user.whatsapp or "",
+                                    'district': user.district or "",
+                                    'regency': user.regency or "",
+                                    'province': user.province or "",
+                                    'address': (user.address or "") | replace('\n', ' '),
+                                    'coordinates': user.coordinates or "",
+                                    'file_ktp': user.file_ktp or "",
+                                    'file_slhs': user.file_slhs or "",
+                                    'file_kitchen_photo': user.file_kitchen_photo or ""
+                                    } %}
+
+                                    <button class="btn btn-sm btn-primary" type="button"
+                                        data-mitra='{{ user_data | tojson }}'
+                                        onclick="loadDetail(JSON.parse(this.getAttribute('data-mitra')))">
+                                        Review
+                                    </button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4">
+                                    <span class="text-muted font-italic">Tidak ada pengajuan baru di wilayah
+                                        Anda.</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include "includes/footer.html" %}
+</div>
+
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+    // Fungsi untuk memuat data dari Tabel ke Panel Detail
+    function loadDetail(data) {
+        // 1. Isi Data Teks
+        document.getElementById('userId').value = data.id;
+        document.getElementById('dispKitchenName').innerText = data.kitchen_name;
+        document.getElementById('dispFullname').innerText = data.fullname;
+        document.getElementById('dispNik').innerText = data.nik;
+        document.getElementById('dispWa').innerText = data.whatsapp;
+
+        // Update Wilayah Baru
+        document.getElementById('dispDistrict').innerText = "Kec. " + data.district;
+        document.getElementById('dispRegency').innerText = data.regency;
+        document.getElementById('dispProvince').innerText = data.province;
+
+        document.getElementById('dispAddress').value = data.address;
+        document.getElementById('dispCoordinates').innerText = "Koord: " + data.coordinates;
+
+        // 2. Helper untuk menampilkan file/gambar
+        updateFileLink('dispFileKtpName', 'linkFileKtp', data.file_ktp);
+        updateFileLink('dispFileSlhsName', 'linkFileSlhs', data.file_slhs);
+
+        // 3. Handle Foto Dapur (Image Preview)
+        const imgEl = document.getElementById('imgKitchen');
+        const linkImg = document.getElementById('linkFileKitchen');
+
+        if (data.file_kitchen_photo && data.file_kitchen_photo !== 'None') {
+            imgEl.src = data.file_kitchen_photo;
+            linkImg.href = data.file_kitchen_photo;
+            linkImg.classList.remove('disabled');
+        } else {
+            imgEl.src = "/static/assets/img/theme/sketch.jpg";
+            linkImg.href = "#";
+            linkImg.classList.add('disabled');
+        }
+
+        // 4. Tampilkan Tombol Aksi
+        document.getElementById('actionButtons').style.display = 'flex';
+
+        // UX: Scroll ke atas untuk mobile
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Helper Function untuk File Link
+    function updateFileLink(nameId, linkId, filePath) {
+        const nameEl = document.getElementById(nameId);
+        const linkEl = document.getElementById(linkId);
+
+        if (filePath && filePath !== 'None') {
+            nameEl.value = filePath.split('/').pop();
+            linkEl.href = filePath;
+            linkEl.classList.remove('disabled-link', 'btn-secondary');
+            linkEl.classList.add('btn-primary');
+        } else {
+            nameEl.value = "File belum diupload";
+            linkEl.href = "#";
+            linkEl.classList.add('disabled-link', 'btn-secondary');
+            linkEl.classList.remove('btn-primary');
+        }
+    }
+
+    function resetDetail() {
+        document.getElementById('verificationForm').reset();
+        document.getElementById('dispKitchenName').innerText = "Pilih Data Dulu";
+        document.getElementById('dispDistrict').innerText = "-";
+        document.getElementById('dispRegency').innerText = "-";
+        document.getElementById('actionButtons').style.display = 'none';
+        document.getElementById('imgKitchen').src = "/static/assets/img/theme/sketch.jpg";
+    }
+
+    // Fungsi Eksekusi (Approve/Reject)
+    function updateStatus(action) {
+        let id = document.getElementById('userId').value;
+        if (!id) return alert("Pilih data terlebih dahulu");
+
+        let confirmMsg = (action === 'approve')
+            ? "Yakin ingin MENYETUJUI mitra ini? Akun mereka akan langsung aktif."
+            : "Yakin ingin MENOLAK mitra ini? Data akan dihapus dari antrian.";
+
+        if (confirm(confirmMsg)) {
+            // Redirect ke route Flask yang sudah dibuat
+            if (action === 'approve') {
+                window.location.href = "/approve/" + id;
+            } else {
+                window.location.href = "/reject/" + id;
+            }
+        }
+    }
+</script>
+
+<style>
+    .disabled-link {
+        pointer-events: none;
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+</style>
+{% endblock javascripts %}

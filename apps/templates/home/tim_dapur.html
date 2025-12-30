@@ -1,0 +1,232 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Manajemen Tim Dapur {% endblock title %}
+
+{% block stylesheets %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/assets/css/tim_dapur.css">
+{% endblock stylesheets %}
+
+{% block content %}
+
+<div class="header bg-primary pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6 col-7">
+                    <h6 class="h2 text-white d-inline-block mb-0">Personil Dapur</h6>
+                    <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+                        <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+                            <li class="breadcrumb-item"><a href="/dashboard"><i class="fas fa-home"></i></a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Tim Dapur</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-xl-4 col-md-6">
+                    <div class="card card-stats">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col">
+                                    <h5 class="card-title text-uppercase text-muted mb-0">Total Staff</h5>
+                                    <span class="h2 font-weight-bold mb-0" id="stat-total">0</span>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="icon icon-shape bg-gradient-info text-white rounded-circle shadow">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-4 col-md-6">
+                    <div class="card card-stats">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col">
+                                    <h5 class="card-title text-uppercase text-muted mb-0">Hadir Hari Ini</h5>
+                                    <span class="h2 font-weight-bold mb-0" id="stat-present">0</span>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="icon icon-shape bg-gradient-success text-white rounded-circle shadow">
+                                        <i class="fas fa-user-check"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-4 col-md-6">
+                    <div class="card card-stats">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col">
+                                    <h5 class="card-title text-uppercase text-muted mb-0">Belum Hadir</h5>
+                                    <span class="h2 font-weight-bold mb-0" id="stat-absent">0</span>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="icon icon-shape bg-gradient-danger text-white rounded-circle shadow">
+                                        <i class="fas fa-user-clock"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt--6">
+    <div class="row">
+
+        <div class="col-xl-4 order-xl-2">
+            <div class="card">
+                <div class="card-header">
+                    <div class="row align-items-center">
+                        <div class="col-8">
+                            <h3 class="mb-0" id="formTitle">Tambah Staff Baru</h3>
+                        </div>
+                        <div class="col-4 text-right">
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="resetForm()">Batal</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form id="staffForm">
+                        <input type="hidden" id="editId">
+                        
+                        <div class="pl-lg-1">
+                            <div class="form-group text-center">
+                                <div class="profile-upload">
+                                    <div class="avatar-preview rounded-circle shadow bg-secondary">
+                                        <i class="fas fa-user fa-3x text-muted mt-3 pt-2"></i>
+                                    </div>
+                                    <small class="d-block mt-2 text-primary pointer">Foto Profile (Auto)</small>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-control-label">Nama Lengkap</label>
+                                <input type="text" id="inputName" class="form-control" placeholder="Contoh: Chef Juna" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-control-label">Peran / Jabatan</label>
+                                <select id="inputRole" class="form-control" required>
+                                    <option value="Head Chef">Head Chef</option>
+                                    <option value="Cook">Juru Masak</option>
+                                    <option value="Helper">Helper</option>
+                                    <option value="Packer">Packing</option>
+                                    <option value="Driver">Driver</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-control-label">No. Telepon</label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                    </div>
+                                    <input type="tel" id="inputPhone" class="form-control" placeholder="08...">
+                                </div>
+                            </div>
+
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-primary my-2 btn-block">Simpan Staff</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-8 order-xl-1">
+            <div class="card">
+                <div class="card-header border-0">
+                    <div class="row align-items-center">
+                        <div class="col-lg-3 col-6">
+                            <h3 class="mb-0">Daftar Tim</h3>
+                        </div>
+                        
+                        <div class="col-lg-9 col-6 text-right">
+                            <div class="d-flex justify-content-end align-items-center flex-wrap">
+                                
+                                <div class="form-group mb-0 mr-2">
+                                    <div class="input-group input-group-alternative input-group-merge">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text"><i class="far fa-calendar-alt"></i></span>
+                                        </div>
+                                        <input class="form-control form-control-sm" type="date" id="filterDate">
+                                    </div>
+                                </div>
+
+                                <div class="form-group mb-0 mr-2 d-none d-md-block">
+                                    <div class="input-group input-group-alternative input-group-merge">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                        </div>
+                                        <input class="form-control form-control-sm" placeholder="Cari..." type="text" id="searchInput">
+                                    </div>
+                                </div>
+
+                                <div class="btn-group btn-group-toggle" data-toggle="buttons">
+                                    <label class="btn btn-sm btn-secondary active" onclick="setFilter('all')">
+                                        <input type="radio" name="options" autocomplete="off" checked> All
+                                    </label>
+                                    <label class="btn btn-sm btn-secondary" onclick="setFilter('Hadir')">
+                                        <input type="radio" name="options" autocomplete="off"> Hadir
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="input-group input-group-alternative input-group-merge mt-3 d-md-none">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                </div>
+                                <input class="form-control form-control-sm" placeholder="Cari personil..." type="text" id="searchInputMobile">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table align-items-center table-flush">
+                        <thead class="thead-light">
+                            <tr>
+                                <th scope="col">Personil</th>
+                                <th scope="col">Performa (Bulanan)</th>
+                                <th scope="col" class="text-center">Status Absensi</th>
+                                <th scope="col" class="text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staffTableBody">
+                            </tbody>
+                    </table>
+                </div>
+
+                <div class="card-footer py-4">
+                    <nav aria-label="...">
+                        <ul class="pagination justify-content-end mb-0">
+                            <li class="page-item disabled"><a class="page-link" href="#"><i class="fas fa-angle-left"></i></a></li>
+                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item"><a class="page-link" href="#"><i class="fas fa-angle-right"></i></a></li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    {% include "includes/footer.html" %}
+</div>
+
+{% endblock content %}
+
+{% block javascripts %}
+<script src="/static/assets/js/tim_dapur.js"></script>
+{% endblock javascripts %}
