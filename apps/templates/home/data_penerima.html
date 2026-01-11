@@ -1,0 +1,118 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Data Penerima MBG {% endblock title %}
+
+{% block content %}
+<div class="header bg-primary pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6">
+                    <h6 class="h2 text-white d-inline-block mb-0">Database Penerima Aktif</h6>
+                </div>
+            </div>
+            <div class="nav-wrapper">
+                <ul class="nav nav-pills nav-fill flex-column flex-md-row" id="tabs-icons-text" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link mb-sm-3 mb-md-0 active" id="tabs-sekolah-tab" data-toggle="tab" href="#tabs-sekolah" role="tab">
+                            <i class="fas fa-school mr-2"></i>Operator Sekolah ({{ sekolah_list|length }})
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link mb-sm-3 mb-md-0" id="tabs-lansia-tab" data-toggle="tab" href="#tabs-lansia" role="tab">
+                            <i class="fas fa-user-friends mr-2"></i>Penerima Lansia ({{ lansia_list|length }})
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt--6">
+    <div class="tab-content" id="myTabContent">
+        
+        <div class="tab-pane fade show active" id="tabs-sekolah" role="tabpanel">
+            <div class="card shadow border-0">
+                <div class="card-header border-0">
+                    <h3 class="mb-0 text-primary">Daftar Sekolah Terverifikasi</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-items-center table-flush">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Nama Sekolah</th>
+                                <th>NPSN</th>
+                                <th>Estimasi Siswa</th>
+                                <th>Kontak Operator</th>
+                                <th>Wilayah</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in sekolah_list %}
+                            <tr>
+                                <td class="font-weight-bold text-dark">{{ u.school_name }}</td>
+                                <td><span class="badge badge-secondary">{{ u.npsn }}</span></td>
+                                <td><span class="font-weight-bold text-success">{{ u.student_count }} Porsi</span></td>
+                                <td>
+                                    <div class="text-sm">{{ u.fullname }}</div>
+                                    <small class="text-muted"><i class="fab fa-whatsapp text-success mr-1"></i>{{ u.phone }}</small>
+                                </td>
+                                <td><small>{{ u.village }}, {{ u.district }}</small></td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="text-center py-4">Belum ada data sekolah.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="tabs-lansia" role="tabpanel">
+            <div class="card shadow border-0">
+                <div class="card-header border-0">
+                    <h3 class="mb-0 text-success">Daftar Lansia Terverifikasi</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-items-center table-flush">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Nama Lengkap</th>
+                                <th>NIK</th>
+                                <th>WhatsApp</th>
+                                <th>Alamat Rumah</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for l in lansia_list %}
+                            <tr>
+                                <td class="font-weight-bold text-dark">{{ l.fullname }}</td>
+                                <td>{{ l.nik or '-' }}</td>
+                                <td>
+                                    <a href="https://wa.me/{{ l.phone }}" target="_blank" class="btn btn-sm btn-success">
+                                        <i class="fab fa-whatsapp"></i> Hubungi
+                                    </a>
+                                </td>
+                                <td class="text-wrap"><small>{{ l.address }}, Desa {{ l.village }}</small></td>
+                                <td>
+                                    {% if l.coordinates %}
+                                    <a href="https://www.google.com/maps?q={{ l.coordinates }}" target="_blank" class="btn btn-sm btn-info">
+                                        <i class="fas fa-map-marker-alt"></i> Lokasi
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="text-center py-4">Belum ada data lansia.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

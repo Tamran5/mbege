@@ -75,7 +75,6 @@ def google_login():
 
 @blueprint.route('/google-callback')
 def google_callback():
-    """Menangani respon dari Google berdasarkan intent user."""
     google = get_google_client()
     token = google.authorize_access_token()
     user_info = token.get('userinfo')
@@ -86,64 +85,78 @@ def google_callback():
 
     email = user_info.get('email')
     user = Users.query.filter_by(email=email).first()
-    
-    # Ambil intent yang disimpan saat inisiasi login
     intent = session.pop('auth_intent', 'login')
 
-    # --- LOGIKA 1: JIKA USER SUDAH TERDAFTAR ---
     if user:
+        # Filter Role untuk Google Login
+        allowed_web_roles = ['admin_dapur', 'super_admin']
+        if user.role not in allowed_web_roles:
+            flash("Akses Ditolak: Gunakan Aplikasi Mobile.", "danger")
+            return redirect(url_for('authentication_blueprint.login'))
+
         if intent == 'register':
-            # Jika user klik DAFTAR tapi akun sudah ada
-            flash("Email sudah terdaftar. Silakan Masuk langsung.", "info")
+            flash("Email sudah terdaftar. Silakan Masuk.", "info")
             return redirect(url_for('authentication_blueprint.login'))
         
-        # Alur login normal
         if user.role == 'admin_dapur' and not user.is_approved:
             return render_template('home/pending_approval.html', form=LoginForm())
         
         login_user(user)
         return redirect(url_for('home_blueprint.index'))
 
-    # --- LOGIKA 2: JIKA USER BELUM TERDAFTAR ---
     else:
+        # Alur jika user belum terdaftar
         if intent == 'login':
-            # Jika user klik MASUK tapi email belum ada di database
-            flash("Email Google Anda belum terdaftar. Silakan Daftar Akun Baru untuk bergabung.", "danger")
+            flash("Email belum terdaftar. Silakan Daftar.", "danger")
             return redirect(url_for('authentication_blueprint.login'))
         
-        # Alur Daftar (Auto-fill): Simpan data ke session dan arahkan ke form
-        session['google_data'] = {
-            'email': email,
-            'fullname': user_info.get('name')
-        }
+        session['google_data'] = {'email': email, 'fullname': user_info.get('name')}
         return redirect(url_for('authentication_blueprint.register'))
+    
+    return redirect(url_for('authentication_blueprint.login'))
 
 # =========================================================
 #  LOGIN & REGISTER MANUAL
 # =========================================================
-
 @blueprint.route('/login', methods=['GET', 'POST'])
 def login():
     login_form = LoginForm(request.form)
+    
+    # A. PRIORITAS: PROSES DATA YANG DIKETIK (POST)
     if request.method == 'POST':
-        username = request.form.get('username')
+        email = request.form.get('email')
         password = request.form.get('password')
-        user = Users.query.filter_by(username=username).first()
+        user = Users.query.filter_by(email=email).first()
+
+        # Debug: Cek di terminal apakah user ditemukan
+        print(f">>> MENCARI USER: {email}")
 
         if user and user.verify_password(password):
-            if user.role == 'admin_dapur' and not user.is_approved:
-                return render_template('home/pending_approval.html', form=login_form)
+            # 1. Bersihkan sesi Santoso secara total sebelum Yanto masuk
+            logout_user()
+            session.clear()
             
+            # 2. Login sebagai Yanto
             login_user(user)
+            print(f">>> LOGIN BERHASIL: {user.email}")
             return redirect(url_for('home_blueprint.index'))
-
-        return render_template('accounts/login.html', msg='Username atau Password salah', form=login_form)
-
-    if current_user.is_authenticated:
-        return redirect(url_for('home_blueprint.index'))
         
-    return render_template('accounts/login.html', form=login_form)
+        # Jika gagal di sini, berarti data di DB memang tidak cocok
+        print(">>> LOGIN GAGAL: Password atau Email salah di DB.")
+        return render_template('accounts/login.html', 
+                             msg='Username atau Password salah', 
+                             form=login_form)
 
+    # B. CEK SESI LAMA (Hanya saat baru buka halaman/GET)
+    if current_user.is_authenticated:
+        allowed_web_roles = ['admin_dapur', 'super_admin']
+        if current_user.role not in allowed_web_roles:
+            logout_user()
+            session.clear()
+            return render_template('accounts/login.html', form=login_form)
+        return redirect(url_for('home_blueprint.index'))
+
+    return render_template('accounts/login.html', form=login_form)
 @blueprint.route('/register-choice')
 def register_choice():
     """Halaman pilihan metode pendaftaran."""
@@ -181,7 +194,6 @@ def register():
                 return render_template('accounts/register.html', form=create_account_form, google_data=google_data)
 
             new_user = Users(
-                username=email,
                 email=email,
                 password=password,
                 role='admin_dapur',

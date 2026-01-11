@@ -3,7 +3,7 @@ from apps import db, login_manager
 from apps.authentication.util import hash_pass, verify_pass 
 from datetime import datetime
 
-# --- MODEL USER (LOGIN & PROFIL) ---
+# --- MODEL USER UTAMA (Terintegrasi Data Wilayah & Kemitraan) ---
 class Users(db.Model, UserMixin):
     __tablename__ = 'users'
 
@@ -12,34 +12,59 @@ class Users(db.Model, UserMixin):
     email = db.Column(db.String(64), unique=True)
     password_hash = db.Column('password', db.LargeBinary)
     
+    # PERAN: 'admin_dapur', 'pengelola_sekolah', 'siswa', 'lansia'
     role = db.Column(db.String(20), default='admin_dapur')
     is_approved = db.Column(db.Boolean, default=False) 
 
-    # Data Diri & Dapur
+    # --- DATA IDENTITAS & PROFIL ---
     fullname = db.Column(db.String(100))
-    nik = db.Column(db.String(20))
-    whatsapp = db.Column(db.String(20))
-    kitchen_name = db.Column(db.String(100))
-    mitra_type = db.Column(db.String(50))
+    phone = db.Column(db.String(20)) # Mapping dari _phoneController di Flutter
+    nik = db.Column(db.String(20), nullable=True) 
+    nisn = db.Column(db.String(20), nullable=True) 
+    npsn = db.Column(db.String(20), nullable=True) 
+    school_name = db.Column(db.String(100), nullable=True) 
+    student_count = db.Column(db.Integer, default=0)
     
-    # Lokasi
-    province = db.Column(db.String(50))
-    regency = db.Column(db.String(50))
-    district = db.Column(db.String(50))
-    address = db.Column(db.Text)
-    coordinates = db.Column(db.String(100))
+    # --- DATA WILAYAH LENGKAP (Input dari Flutter) ---
+    province = db.Column(db.String(100))
+    city = db.Column(db.String(100))
+    district = db.Column(db.String(100))
+    village = db.Column(db.String(100))
+    address = db.Column(db.Text) # Detail Jalan/RT/RW
+    coordinates = db.Column(db.String(100)) # Lokasi GPS Lansia
 
-    # File Uploads
-    file_ktp = db.Column(db.String(255))
-    file_slhs = db.Column(db.String(255))
+    # --- RELASI KEMITRAAN BERJENJANG ---
+    # 1. Menghubungkan Siswa ke Sekolah
+    sekolah_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    
+    # 2. Menghubungkan Sekolah/Lansia ke Mitra Dapur (Pilihan saat Register)
+    dapur_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    # Relasi backref untuk membedakan daftar penerima di sisi Dapur
+    pendaftar_dapur = db.relationship('Users', 
+                                      foreign_keys=[dapur_id],
+                                      backref=db.backref('mitra_dapur', remote_side=[id]))
+
+    # --- FILE UPLOADS (Path ke static/uploads) ---
+    file_ktp = db.Column(db.String(255))         
+    file_sk_operator = db.Column(db.String(255)) 
     file_kitchen_photo = db.Column(db.String(255))
 
-    # --- RELASI DATABASE ---
+    # --- DATA LOKASI & DAPUR ---
+    kitchen_name = db.Column(db.String(100)) # Khusus Admin Dapur
+    mitra_type = db.Column(db.String(50))   # Khusus Admin Dapur
+
+
+    # --- RELASI FUNGSIONAL ---
     master_ingredients = db.relationship('MasterIngredient', backref='owner', lazy='dynamic')
     my_menus = db.relationship('Menus', backref='chef', lazy='dynamic')
     my_staff = db.relationship('Staff', backref='boss', lazy='dynamic')
     my_beneficiaries = db.relationship('Penerima', backref='owner', lazy='dynamic')
-    my_activities = db.relationship('AktivitasDapur', backref='admin_dapur', lazy='dynamic', cascade="all, delete-orphan")
+    my_activities = db.relationship('AktivitasDapur', backref='admin_dapur', lazy='dynamic')
+    reviews = db.relationship('UlasanPenerima', backref='student', lazy='dynamic')
+
+    temp_otp = db.Column(db.String(6), nullable=True)
+    otp_created_at = db.Column(db.DateTime, nullable=True)
 
     @property
     def password(self):
@@ -51,15 +76,6 @@ class Users(db.Model, UserMixin):
 
     def verify_password(self, password):        
         return verify_pass(password, self.password_hash)
-
-    def get_lat_long(self):
-        try:
-            if self.coordinates and ',' in self.coordinates:
-                lat, lng = self.coordinates.split(',')
-                return float(lat.strip()), float(lng.strip())
-        except ValueError:
-            return None
-        return None
 
     def __init__(self, **kwargs):
         for property, value in kwargs.items():
@@ -227,10 +243,10 @@ class AttendanceLog(db.Model):
 # --- LOGIN LOADER ---
 @login_manager.user_loader
 def user_loader(id):
-    return Users.query.filter_by(id=id).first()
+    return Users.query.get(int(id))
 
 @login_manager.request_loader
 def request_loader(request):
-    username = request.form.get('username')
-    user = Users.query.filter_by(username=username).first()
+    email = request.form.get('email')
+    user = Users.query.filter_by(email=email).first()
     return user if user else None

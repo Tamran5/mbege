@@ -227,7 +227,60 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // ==========================================
-    // 1. LOGIKA WIZARD (STEPS)
+    // 1. INISIALISASI DATA WILAYAH (STATIC JSON)
+    // ==========================================
+    let masterData = {};
+    const provSelect = document.getElementById('province');
+    const regSelect = document.getElementById('regency');
+    const distSelect = document.getElementById('district');
+
+    // Mengambil file dari apps/static/data/regions_master.json
+    fetch("{{ url_for('static', filename='data/regions_master.json') }}")
+        .then(r => r.json())
+        .then(data => {
+            masterData = data;
+            let options = '<option value="" disabled selected>Pilih Provinsi</option>';
+            Object.keys(masterData).sort().forEach(prov => {
+                options += `<option value="${prov}">${prov}</option>`;
+            });
+            provSelect.innerHTML = options;
+        })
+        .catch(err => console.error("Gagal memuat JSON wilayah:", err));
+
+    // Event: Pilih Provinsi -> Load Kabupaten/Kota
+    provSelect.addEventListener('change', function() {
+        const selectedProv = this.value;
+        regSelect.disabled = false;
+        regSelect.innerHTML = '<option value="" disabled selected>Pilih Kabupaten/Kota</option>';
+        distSelect.innerHTML = '<option value="" disabled selected>Pilih Kecamatan</option>';
+        distSelect.disabled = true;
+
+        if (masterData[selectedProv]) {
+            let options = '<option value="" disabled selected>Pilih Kabupaten/Kota</option>';
+            Object.keys(masterData[selectedProv]).sort().forEach(reg => {
+                options += `<option value="${reg}">${reg}</option>`;
+            });
+            regSelect.innerHTML = options;
+        }
+    });
+
+    // Event: Pilih Kabupaten -> Load Kecamatan
+    regSelect.addEventListener('change', function() {
+        const selectedProv = provSelect.value;
+        const selectedReg = this.value;
+        distSelect.disabled = false;
+
+        if (masterData[selectedProv] && masterData[selectedProv][selectedReg]) {
+            let options = '<option value="" disabled selected>Pilih Kecamatan</option>';
+            masterData[selectedProv][selectedReg].sort().forEach(dist => {
+                options += `<option value="${dist}">${dist}</option>`;
+            });
+            distSelect.innerHTML = options;
+        }
+    });
+
+    // ==========================================
+    // 2. LOGIKA WIZARD (STEPS)
     // ==========================================
     const steps = document.querySelectorAll(".form-step");
     const nextBtns = document.querySelectorAll(".next-btn");
@@ -241,17 +294,14 @@
                 steps[currentStepIdx].classList.remove("active");
                 stepIcons[currentStepIdx].classList.add("active");
                 stepIcons[currentStepIdx].classList.remove("current");
-                
                 currentStepIdx++;
-                
                 steps[currentStepIdx].classList.add("active");
                 stepIcons[currentStepIdx].classList.add("current");
-                
-                // Inisialisasi peta jika masuk ke step 2
+
+                // Refresh peta jika masuk ke step Profil Dapur
                 if(currentStepIdx === 1) {
                     setTimeout(() => { 
                         map.invalidateSize(); 
-                        getLocation(); // Deteksi otomatis saat masuk profil dapur
                     }, 400);
                 }
             }
@@ -262,9 +312,7 @@
         btn.addEventListener("click", () => {
             steps[currentStepIdx].classList.remove("active");
             stepIcons[currentStepIdx].classList.remove("current");
-            
             currentStepIdx--;
-            
             steps[currentStepIdx].classList.add("active");
             stepIcons[currentStepIdx].classList.remove("active");
             stepIcons[currentStepIdx].classList.add("current");
@@ -274,6 +322,17 @@
     function validateStep(idx) {
         const inputs = steps[idx].querySelectorAll("input, select, textarea");
         let isValid = true;
+        
+        // Validasi khusus password di Step 1
+        if (idx === 0) {
+            const p1 = document.getElementById('pass1').value;
+            const p2 = document.getElementById('pass2').value;
+            if (p1 !== p2) {
+                alert("Konfirmasi password tidak cocok!");
+                return false;
+            }
+        }
+
         inputs.forEach(input => {
             if (!input.checkValidity()) {
                 input.reportValidity();
@@ -284,38 +343,17 @@
     }
 
     // ==========================================
-    // 2. LIHAT PASSWORD
-    // ==========================================
-    function togglePassword(inputId, iconId) {
-        const input = document.getElementById(inputId);
-        const icon = document.getElementById(iconId);
-        if (input.type === "password") {
-            input.type = "text";
-            icon.classList.replace("fa-eye", "fa-eye-slash");
-        } else {
-            input.type = "password";
-            icon.classList.replace("fa-eye-slash", "fa-eye");
-        }
-    }
-
-    // ==========================================
     // 3. LOGIKA PETA & GPS (LEAFLET)
     // ==========================================
     let map = L.map('map').setView([-6.2088, 106.8456], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OSM'
-    }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
     let marker;
 
     function getLocation() {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((pos) => {
-                const lat = pos.coords.latitude;
-                const lng = pos.coords.longitude;
-                updateMapMarker(lat, lng, 16);
-            }, (err) => {
-                console.warn("GPS diaktifkan manual atau gagal: " + err.message);
+                updateMapMarker(pos.coords.latitude, pos.coords.longitude, 16);
             });
         }
     }
@@ -323,10 +361,8 @@
     function updateMapMarker(lat, lng, zoom = null) {
         const latlng = [lat, lng];
         if (zoom) map.setView(latlng, zoom);
-        
-        if (marker) {
-            marker.setLatLng(latlng);
-        } else {
+        if (marker) { marker.setLatLng(latlng); } 
+        else { 
             marker = L.marker(latlng, {draggable: true}).addTo(map);
             marker.on('dragend', function() {
                 const pos = marker.getLatLng();
@@ -336,55 +372,13 @@
         document.getElementById('latlongInput').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     }
 
-    map.on('click', function(e) {
-        updateMapMarker(e.latlng.lat, e.latlng.lng);
-    });
+    map.on('click', function(e) { updateMapMarker(e.latlng.lat, e.latlng.lng); });
 
-    // ==========================================
-    // 4. API WILAYAH INDONESIA
-    // ==========================================
-    const apiBase = "https://www.emsifa.com/api-wilayah-indonesia/api";
-
-    // Load Provinsi
-    fetch(`${apiBase}/provinces.json`)
-        .then(r => r.json())
-        .then(data => {
-            let options = '<option value="" disabled selected>Pilih Provinsi</option>';
-            data.forEach(p => options += `<option value="${p.name}" data-id="${p.id}">${p.name}</option>`);
-            document.getElementById('province').innerHTML = options;
-        });
-
-    // Provinsi -> Kabupaten
-    document.getElementById('province').addEventListener('change', function() {
-        const provId = this.options[this.selectedIndex].getAttribute('data-id');
-        const regSelect = document.getElementById('regency');
-        regSelect.disabled = false;
-        regSelect.innerHTML = '<option>Loading...</option>';
-        
-        fetch(`${apiBase}/regencies/${provId}.json`)
-            .then(r => r.json())
-            .then(data => {
-                let options = '<option value="" disabled selected>Pilih Kabupaten</option>';
-                data.forEach(r => options += `<option value="${r.name}" data-id="${r.id}">${r.name}</option>`);
-                regSelect.innerHTML = options;
-                document.getElementById('district').disabled = true;
-            });
-    });
-
-    // Kabupaten -> Kecamatan
-    document.getElementById('regency').addEventListener('change', function() {
-        const regId = this.options[this.selectedIndex].getAttribute('data-id');
-        const distSelect = document.getElementById('district');
-        distSelect.disabled = false;
-        distSelect.innerHTML = '<option>Loading...</option>';
-        
-        fetch(`${apiBase}/districts/${regId}.json`)
-            .then(r => r.json())
-            .then(data => {
-                let options = '<option value="" disabled selected>Pilih Kecamatan</option>';
-                data.forEach(d => options += `<option value="${d.name}" data-id="${d.id}">${d.name}</option>`);
-                distSelect.innerHTML = options;
-            });
-    });
+    function togglePassword(inputId, iconId) {
+        const input = document.getElementById(inputId);
+        const icon = document.getElementById(iconId);
+        input.type = input.type === "password" ? "text" : "password";
+        icon.classList.toggle("fa-eye-slash");
+    }
 </script>
 {% endblock content %}

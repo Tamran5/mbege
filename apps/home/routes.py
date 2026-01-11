@@ -3,7 +3,7 @@ import os
 import json
 import base64
 from datetime import datetime, date
-from flask import render_template, request, redirect, url_for, flash, jsonify
+from flask import render_template, request, redirect, url_for, flash, jsonify,session
 from flask_login import login_required, current_user
 from jinja2 import TemplateNotFound
 from werkzeug.utils import secure_filename
@@ -12,6 +12,13 @@ from apps import db
 from apps.home import blueprint
 from apps.home.utils import get_sentiment_prediction
 from flask import jsonify
+from functools import wraps
+from flask import abort
+from flask_login import current_user
+from flask import request, redirect, url_for, flash
+from flask_login import logout_user, current_user
+
+
 
 # --- IMPORT MODELS ---
 from apps.authentication.models import (
@@ -22,6 +29,7 @@ from apps.authentication.models import (
 # =========================================================
 #  CONFIG & HELPER
 # =========================================================
+
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 UPLOAD_FOLDER = 'apps/static/assets/img/menus'
@@ -35,12 +43,48 @@ def allowed_file(filename):
 #  ROUTE UTAMA & DASHBOARD (Mencegah BuildError Gambar 11)
 # =========================================================
 
+@blueprint.before_app_request
+def restrict_web_access():
+    # 1. Tentukan halaman yang dikecualikan (login, static, api) agar tidak looping
+    exempt_paths = [
+        url_for('authentication_blueprint.login'),
+        url_for('authentication_blueprint.logout'),
+        url_for('home_blueprint.home'),
+        '/static/',
+        '/api/'
+    ]
+    
+    # Cek apakah request saat ini menuju halaman web (bukan API atau file static)
+    if not any(request.path.startswith(path) for path in exempt_paths) and not request.path.startswith('/static'):
+        if current_user.is_authenticated:
+            allowed_web_roles = ['admin_dapur', 'super_admin']
+            
+            # Jika role dilarang (Siswa/Lansia/Pengelola) mencoba akses Dashboard Web
+            if current_user.role not in allowed_web_roles:
+                logout_user() 
+                flash("Akses Ditolak: Role Anda hanya diizinkan via Mobile.", "danger")
+                return redirect(url_for('authentication_blueprint.login'))
+            
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        allowed_web_roles = ['admin_dapur', 'super_admin']
+        print(f"DEBUG DEKORATOR: User={current_user.email}, Role='{current_user.role}'")
+        # Jika tidak login atau role tidak sesuai, tolak akses (Error 403)
+        if not current_user.is_authenticated or current_user.role not in allowed_web_roles:
+            print("DEBUG DEKORATOR: AKSES DITOLAK (403)")
+            abort(403) 
+        return f(*args, **kwargs)
+    return decorated_function
+
 @blueprint.route('/')
 def home():
     return render_template('home/home.html', segment='home')
 
 @blueprint.route('/dashboard')
 @login_required
+@admin_required
 def index():
     """Endpoint: home_blueprint.index"""
     role = getattr(current_user, 'role', None)
@@ -58,8 +102,31 @@ def index():
 #  PROFILE 
 # =========================================================
 
+@blueprint.route('/data-penerima')
+@login_required
+@admin_required
+def data_penerima():
+    # 1. Daftar Sekolah: Tetap seperti sebelumnya
+    sekolah_list = Users.query.filter_by(
+        role='pengelola_sekolah', 
+        is_approved=True, 
+        district=current_user.district
+    ).all()
+
+    lansia_list = Users.query.filter_by(
+        role='lansia',
+        is_approved=True,
+        district=current_user.district
+    ).all()
+    
+    return render_template('home/data_penerima.html', 
+                           title='Data Penerima Aktif',
+                           sekolah_list=sekolah_list,
+                           lansia_list=lansia_list)
+
 @blueprint.route('/profile', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def profile():
     """Endpoint: home_blueprint.profile"""
     if request.method == 'POST':
@@ -82,6 +149,7 @@ def profile():
 
 @blueprint.route('/penyusunan-resep')
 @login_required
+@admin_required
 def penyusunan_resep():
     if getattr(current_user, 'role', None) == 'admin_dapur' and not current_user.is_approved:
         return render_template('home/pending_approval.html'), 200
@@ -91,6 +159,7 @@ def penyusunan_resep():
 
 @blueprint.route('/api/simpan-bahan-master', methods=['POST'])
 @login_required
+@admin_required
 def api_simpan_bahan():
     try:
         data = request.get_json()
@@ -117,9 +186,55 @@ def api_simpan_bahan():
     except Exception as e:
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 400
+    
+
+@blueprint.route('/verifikasi-penerima')
+@login_required
+@admin_required
+def verifikasi_penerima():
+    if current_user.role != 'admin_dapur':
+        return render_template('home/page-403.html'), 403
+    
+    # PERBAIKAN: Hanya ambil pendaftar yang memilih dapur ini
+    pendaftar = Users.query.filter(
+        Users.role.in_(['pengelola_sekolah', 'lansia']),
+        Users.is_approved == False,
+        Users.dapur_id == current_user.id  # Filter relasi
+    ).all()
+    
+    return render_template('home/verifikasi_penerima.html', pendaftar=pendaftar, segment='verifikasi_penerima')
+
+@blueprint.route('/verifikasi/<action>/<int:user_id>')
+@login_required
+@admin_required
+def process_verifikasi(action, user_id):
+    # Proteksi: Hanya Admin Dapur yang boleh mengeksekusi
+    if current_user.role != 'admin_dapur':
+        flash("Akses ditolak!", "danger")
+        return redirect(url_for('home_blueprint.index'))
+
+    user = Users.query.get_or_404(user_id)
+
+    if action == 'approve':
+        user.is_approved = True # Mengubah status agar bisa login di Flutter
+        flash(f"Pendaftaran {user.fullname} ({user.role}) berhasil DISETUJUI.", "success")
+    
+    elif action == 'reject':
+        # Jika ditolak, data dihapus dari database untuk menjaga kebersihan antrian
+        db.session.delete(user)
+        flash(f"Pendaftaran {user.fullname} telah DITOLAK dan dihapus.", "warning")
+
+    try:
+        db.session.commit() # Simpan perubahan ke database fisik
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Gagal memproses data: {str(e)}", "danger")
+
+    return redirect(url_for('home_blueprint.verifikasi_penerima'))
 
 @blueprint.route('/api/update-bahan-master/<int:id>', methods=['POST'])
 @login_required
+@admin_required
 def api_update_bahan(id):
     try:
         item = MasterIngredient.query.get_or_404(id)
@@ -146,15 +261,12 @@ def api_update_bahan(id):
     
 
 # =========================================================
-#  KATALOG MENU (SUSUN PAKET HARIAN SOP MBG)
-# =========================================================
-
-# =========================================================
 #  KATALOG MENU (1 HARI 1 MENU VALIDATION)
 # =========================================================
 
 @blueprint.route('/katalog-menu')
 @login_required
+@admin_required
 def daftar_katalog():
     if getattr(current_user, 'role', None) == 'admin_dapur' and not current_user.is_approved:
         return render_template('home/pending_approval.html'), 200
@@ -166,6 +278,7 @@ def daftar_katalog():
 
 @blueprint.route('/api/simpan-menu-katalog', methods=['POST'])
 @login_required
+@admin_required
 def api_simpan_menu_katalog():
     try:
         # 1. Validasi Batasan 1 Hari 1 Menu
@@ -282,11 +395,13 @@ def api_get_today_menu():
 
 @blueprint.route('/ulasan')
 @login_required
+@admin_required
 def ulasan_penerima():
     return render_template('home/ulasan.html', segment='ulasan')
 
 @blueprint.route('/api/ulasan-stats')
 @login_required
+@admin_required
 def api_ulasan_stats():
     # Pastikan model yang digunakan adalah UlasanPenerima
     reviews = UlasanPenerima.query.filter_by(user_id=current_user.id).all()
@@ -337,6 +452,7 @@ def api_receive_review():
 
 @blueprint.route('/monitoring')
 @login_required
+@admin_required
 def route_monitoring():
     """Endpoint: home_blueprint.route_monitoring"""
     if getattr(current_user, 'role', None) != 'admin_dapur':
@@ -347,6 +463,7 @@ def route_monitoring():
 
 @blueprint.route('/api/submit-activity', methods=['POST'])
 @login_required
+@admin_required
 def api_submit_activity():
     try:
         data = request.json
@@ -393,6 +510,7 @@ def api_submit_activity():
 
 @blueprint.route('/admin-gizi')
 @login_required
+@admin_required
 def dashboard_superadmin():
     """Dashboard khusus Super Admin."""
     if getattr(current_user, 'role', None) != 'super_admin':
@@ -407,6 +525,7 @@ def dashboard_superadmin():
 
 @blueprint.route('/verifikasi-mitra')
 @login_required
+@admin_required
 def verifikasi_mitra():
     if getattr(current_user, 'role', None) != 'super_admin':
         return redirect(url_for('home_blueprint.index'))
@@ -417,6 +536,7 @@ def verifikasi_mitra():
 
 @blueprint.route('/data-mitra')
 @login_required
+@admin_required
 def data_mitra():
     if getattr(current_user, 'role', None) != 'super_admin':
         return redirect(url_for('home_blueprint.index'))
@@ -427,6 +547,7 @@ def data_mitra():
 
 @blueprint.route('/peta-sebaran')
 @login_required
+@admin_required
 def peta_sebaran():
     if getattr(current_user, 'role', None) != 'super_admin':
         return redirect(url_for('home_blueprint.index'))
@@ -434,6 +555,7 @@ def peta_sebaran():
 
 @blueprint.route('/admin-gizi/monitoring-proses')
 @login_required
+@admin_required
 def gizi_monitoring_proses():
     if getattr(current_user, 'role', None) != 'super_admin':
         return redirect(url_for('home_blueprint.index'))
@@ -441,6 +563,7 @@ def gizi_monitoring_proses():
 
 @blueprint.route('/admin-gizi/profile', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def superadmin_profile():
     if getattr(current_user, 'role', None) != 'super_admin':
         return redirect(url_for('home_blueprint.index'))
@@ -452,6 +575,7 @@ def superadmin_profile():
 
 @blueprint.route('/<template>')
 @login_required
+@admin_required
 def route_template(template):
     try:
         if not template.endswith('.html'):
@@ -468,6 +592,7 @@ def route_template(template):
 
 @blueprint.route('/api/cari-bahan-master')
 @login_required
+@admin_required
 def api_cari_bahan():
     query = request.args.get('q', '')
     ingredients = MasterIngredient.query.filter(
@@ -482,6 +607,7 @@ def api_cari_bahan():
 
 @blueprint.route('/api/hapus-bahan-master/<int:id>', methods=['DELETE'])
 @login_required
+@admin_required
 def api_delete_ingredient(id):
     item = MasterIngredient.query.filter_by(id=id, user_id=current_user.id).first()
     if not item:
@@ -492,6 +618,7 @@ def api_delete_ingredient(id):
 
 @blueprint.route('/approve/<int:id>')
 @login_required
+@admin_required
 def approve_mitra(id):
     if getattr(current_user, 'role', None) != 'super_admin':
         return redirect(url_for('home_blueprint.index'))
@@ -509,6 +636,7 @@ def approve_mitra(id):
 
 @blueprint.route('/reject/<int:id>')
 @login_required
+@admin_required
 def reject_mitra(id):
     if getattr(current_user, 'role', None) != 'super_admin':
         return redirect(url_for('home_blueprint.index'))
@@ -527,6 +655,7 @@ def reject_mitra(id):
 
 @blueprint.route('/hapus-menu/<int:id>')
 @login_required
+@admin_required
 def hapus_menu(id):
     menu = Menus.query.get_or_404(id)
     if menu.user_id != current_user.id:
@@ -540,6 +669,7 @@ def hapus_menu(id):
 
 @blueprint.route('/edit-menu/<int:id>')
 @login_required
+@admin_required
 def edit_menu(id):
     menu = Menus.query.get_or_404(id)
     if menu.user_id != current_user.id:

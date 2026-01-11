@@ -4,6 +4,7 @@ Copyright (c) 2019 - present AppSeed.us
 """
 
 from flask_migrate import Migrate
+from flask_cors import CORS  # Tambahkan import ini
 from sys import exit
 from decouple import config
 
@@ -17,14 +18,17 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 get_config_mode = 'Debug' if DEBUG else 'Production'
 
 try:
-
     # Load the configuration using the default values
     app_config = config_dict[get_config_mode.capitalize()]
-
 except KeyError:
     exit('Error: Invalid <config_mode>. Expected values [Debug, Production] ')
 
 app = create_app(app_config)
+
+# --- INTEGRASI UNTUK FLUTTER WEB & MOBILE ---
+# Mengizinkan akses dari Chrome (Flutter Web) dan perangkat luar
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True) 
+
 Migrate(app, db)
 
 if DEBUG:
@@ -33,4 +37,4 @@ if DEBUG:
     app.logger.info('DBMS        = ' + app_config.SQLALCHEMY_DATABASE_URI)
 
 if __name__ == "__main__":
-    app.run()
+    app.run(host='0.0.0.0', port=5000, debug=True)

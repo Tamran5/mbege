@@ -1,7 +1,7 @@
 <nav class="sidenav navbar navbar-vertical fixed-left navbar-expand-xs navbar-light bg-white" id="sidenav-main">
   <div class="sidenav-header align-items-center">
     <a class="navbar-brand" href="/">
-      <img src="/static/assets/img/brand/logo.png" class="navbar-brand-img" alt="Logo">
+      <img src="/static/assets/img/brand/logo.png" class="navbar-brand-img" alt="Logo MBG">
     </a>
   </div>
 
@@ -12,7 +12,7 @@
         <ul class="navbar-nav">
           <li class="nav-item">
             {% if current_user.role == 'super_admin' %}
-                <a class="nav-link {% if 'admin_gizi' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.dashboard_superadmin') }}">
+                <a class="nav-link {% if 'dashboard_superadmin' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.dashboard_superadmin') }}">
                   <i class="fas fa-chart-pie"></i>
                   <span class="nav-link-text">Dashboard Statistik</span>
                 </a>
@@ -26,6 +26,8 @@
         </ul>
 
         {% if current_user.role == 'super_admin' %}
+            <hr class="my-2">
+            <h6 class="navbar-heading p-0 text-muted"><span class="docs-normal">MONITORING NASIONAL</span></h6>
             <ul class="navbar-nav">
               <li class="nav-item">
                 <a class="nav-link {% if 'monitoring_proses' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.gizi_monitoring_proses') }}">
@@ -36,7 +38,7 @@
               <li class="nav-item">
                 <a class="nav-link {% if 'peta_sebaran' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.peta_sebaran') }}">
                   <i class="fas fa-map-marked-alt"></i>
-                  <span class="nav-link-text">Peta Sebaran</span>
+                  <span class="nav-link-text">Peta Sebaran Riset</span>
                 </a>
               </li>
             </ul>
@@ -45,15 +47,15 @@
             <h6 class="navbar-heading p-0 text-muted"><span class="docs-normal">MANAJEMEN MITRA</span></h6>
             <ul class="navbar-nav">
                 <li class="nav-item">
-                    <a class="nav-link {% if 'verifikasi' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.verifikasi_mitra') }}">
-                    <i class="fas fa-user-check"></i>
-                    <span class="nav-link-text">Verifikasi Pendaftaran</span>
+                    <a class="nav-link {% if 'verifikasi_mitra' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.verifikasi_mitra') }}">
+                      <i class="fas fa-user-check"></i>
+                      <span class="nav-link-text">Verifikasi Mitra Dapur</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {% if 'data_mitra' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.data_mitra') }}"> 
-                    <i class="fas fa-store"></i>
-                    <span class="nav-link-text">Data Dapur Aktif</span>
+                      <i class="fas fa-store"></i>
+                      <span class="nav-link-text">Data Dapur Aktif</span>
                     </a>
                 </li>
             </ul>
@@ -61,24 +63,41 @@
         {% elif current_user.role == 'admin_dapur' %}
             
             <hr class="my-2">
-            <h6 class="navbar-heading p-0 text-muted"><span class="docs-normal">MANAJEMEN GIZI</span></h6>
+            <h6 class="navbar-heading p-0 text-muted"><span class="docs-normal">VERIFIKASI & DISTRIBUSI</span></h6>
             <ul class="navbar-nav">
               <li class="nav-item">
-                <a class="nav-link {% if 'penyusunan_resep' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.penyusunan_resep') }}">
-                  <i class="fas fa-mortar-pestle"></i>
-                  <span class="nav-link-text">Manajemen Gizi</span>
+                <a class="nav-link {% if 'verifikasi_penerima' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.verifikasi_penerima') }}">
+                  <i class="fas fa-school"></i>
+                  <span class="nav-link-text">Verifikasi Penerima</span>
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link {% if 'katalog_menu' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.daftar_katalog') }}">
-                  <i class="fas fa-utensils"></i>
-                  <span class="nav-link-text">Distribusi Menu</span>
+                <a class="nav-link {% if 'data_penerima' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.data_penerima') }}">
+                  <i class="fas fa-shipping-fast"></i>
+                  <span class="nav-link-text">Data  Penerima</span>
                 </a>
               </li>
             </ul>
 
             <hr class="my-2">
-            <h6 class="navbar-heading p-0 text-muted"><span class="docs-normal">OPERASIONAL DAPUR</span></h6>
+            <h6 class="navbar-heading p-0 text-muted"><span class="docs-normal">MANAJEMEN GIZI</span></h6>
+            <ul class="navbar-nav">
+              <li class="nav-item">
+                <a class="nav-link {% if 'penyusunan_resep' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.penyusunan_resep') }}">
+                  <i class="fas fa-mortar-pestle"></i>
+                  <span class="nav-link-text">Penyusunan Menu</span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link {% if 'katalog_menu' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.daftar_katalog') }}">
+                  <i class="fas fa-utensils"></i>
+                  <span class="nav-link-text">Katalog Menu MBG</span>
+                </a>
+              </li>
+            </ul>
+
+            <hr class="my-2">
+            <h6 class="navbar-heading p-0 text-muted"><span class="docs-normal">OPERASIONAL & FEEDBACK</span></h6>
             <ul class="navbar-nav">
               <li class="nav-item">
                 <a class="nav-link {% if 'monitoring' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.route_monitoring') }}">
@@ -87,34 +106,17 @@
                 </a>
               </li>
               <li class="nav-item">
+                <a class="nav-link {% if 'ulasan' in segment %} active {% endif %}" href="/ulasan">
+                  <i class="fas fa-star"></i>
+                  <span class="nav-link-text">Ulasan Siswa (AI)</span>
+                </a>
+              </li>
+              <li class="nav-item">
                 <a class="nav-link {% if 'tim_dapur' in segment %} active {% endif %}" href="/tim_dapur">
                   <i class="fas fa-users-cog"></i>
                   <span class="nav-link-text">Tim Dapur</span>
                 </a>
               </li>
-              <li class="nav-item">
-                <a class="nav-link {% if 'ulasan' in segment %} active {% endif %}" href="/ulasan">
-                  <i class="fas fa-star"></i>
-                  <span class="nav-link-text">Ulasan & Penilaian</span>
-                </a>
-              </li>
-            </ul>
-            
-            <hr class="my-2">
-            <h6 class="navbar-heading p-0 text-muted"><span class="docs-normal">MANAJEMEN DISTRIBUSI</span></h6>
-            <ul class="navbar-nav">
-              <li class="nav-item">
-                <a class="nav-link {% if 'penerima' in segment %} active {% endif %}" href="/penerima">
-                  <i class="fas fa-users"></i>
-                  <span class="nav-link-text">Data Penerima Manfaat</span>
-                </a>
-              </li>
-              <!-- <li class="nav-item">
-                <a class="nav-link {% if 'map' in segment %} active {% endif %}" href="/map">
-                  <i class="fas fa-truck"></i>
-                  <span class="nav-link-text">Driver & Pelacakan</span>
-                </a>
-              </li> -->
             </ul>
         {% endif %}
 
@@ -125,7 +127,7 @@
             {% if current_user.role == 'super_admin' %}
                 <a class="nav-link {% if 'profile_admin' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.superadmin_profile') }}">
                   <i class="fas fa-user-shield"></i>
-                  <span class="nav-link-text">Profil Admin</span>
+                  <span class="nav-link-text">Profil Admin Pusat</span>
                 </a>
             {% else %}
                 <a class="nav-link {% if 'profile' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.profile') }}">
