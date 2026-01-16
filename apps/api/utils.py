@@ -6,42 +6,68 @@ from apps.authentication.models import Users
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        # --- 1. BYPASS UNTUK OPTIONS (PENTING!) ---
+        # Browser (Flutter Web) mengirim OPTIONS tanpa header Authorization.
+        # Kita izinkan lewat agar rute bisa menangani CORS dengan benar.
+        if request.method == 'OPTIONS':
+            return f(None, *args, **kwargs)
+
         token = None
         
-        # 1. Cek Header
+        # 2. Ekstraksi Header dengan Validasi Karakter
         if 'Authorization' in request.headers:
             auth_header = request.headers['Authorization']
-            if auth_header.startswith("Bearer "):
-                token = auth_header.split(" ")[1]
+            parts = auth_header.split(" ")
+            if len(parts) == 2 and parts[0] == "Bearer":
+                token = parts[1]
         
-        if not token:
-            return jsonify({'status': 'error', 'message': 'Token tidak ditemukan!'}), 401
+        # 3. Cek apakah token benar-benar ada dan bukan string "null"
+        if not token or token == "" or token == "null":
+            return jsonify({
+                'status': 'error', 
+                'message': 'Token tidak ditemukan atau tidak valid!'
+            }), 401
 
         try:
-            # 2. Decode menggunakan SECRET_KEY dari config aplikasi
-            # Pastikan ini sama dengan saat login!
+            # 4. Validasi Format Dasar (Segmen JWT)
+            if token.count('.') != 2:
+                raise jwt.InvalidTokenError("Format JWT tidak lengkap (kurang segmen)")
+
+            # 5. Decode menggunakan SECRET_KEY
             data = jwt.decode(
                 token, 
                 current_app.config['SECRET_KEY'], 
                 algorithms=["HS256"]
             )
             
-            # 3. Cari User
-            current_user = Users.query.filter_by(id=data['user_id']).first()
+            # 6. Cari User menggunakan Primary Key
+            current_user = Users.query.get(data['user_id'])
             
             if not current_user:
-                return jsonify({'status': 'error', 'message': 'User tidak valid!'}), 401
+                return jsonify({
+                    'status': 'error', 
+                    'message': 'User sudah tidak terdaftar!'
+                }), 401
                 
         except jwt.ExpiredSignatureError:
-            return jsonify({'status': 'error', 'message': 'Token sudah kedaluwarsa!'}), 401
+            return jsonify({
+                'status': 'error', 
+                'message': 'Sesi Anda telah berakhir, silakan login kembali!'
+            }), 401
         except jwt.InvalidTokenError as e:
-            # Tambahkan print untuk melihat alasan detail di console Flask
-            print(f"JWT Error: {str(e)}") 
-            return jsonify({'status': 'error', 'message': 'Token tidak valid!'}), 401
+            print(f"JWT Error: {str(e)}")
+            return jsonify({
+                'status': 'error', 
+                'message': 'Token tidak valid!'
+            }), 401
         except Exception as e:
             print(f"Unknown Error: {str(e)}")
-            return jsonify({'status': 'error', 'message': 'Terjadi kesalahan sistem!'}), 401
+            return jsonify({
+                'status': 'error', 
+                'message': 'Terjadi kesalahan sistem!'
+            }), 401
 
+        # Lanjutkan ke fungsi rute dengan membawa objek user
         return f(current_user, *args, **kwargs)
 
     return decorated

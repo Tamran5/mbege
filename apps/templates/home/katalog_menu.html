@@ -1,6 +1,6 @@
 {% extends 'layouts/base.html' %}
 
-{% block title %} Katalog Menu MBG {% endblock title %}
+{% block title %} Katalog Menu MBG - Standar Gizi 2025 {% endblock title %}
 
 {% block content %}
 <div class="header bg-primary pb-6">
@@ -8,28 +8,17 @@
     <div class="header-body">
       <div class="row align-items-center py-4">
         <div class="col-lg-6">
-          <h6 class="h2 text-white d-inline-block mb-0">Manajemen Distribusi</h6>
+          <h6 class="h2 text-white d-inline-block mb-0">Manajemen Distribusi MBG</h6>
           <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
             <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
               <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
-              <li class="breadcrumb-item active">Database Katalog Menu</li>
+              <li class="breadcrumb-item active">Penyusunan Paket Harian</li>
             </ol>
           </nav>
         </div>
       </div>
       
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-              <span class="alert-text"><strong>{{ 'Berhasil' if category == 'success' else 'Gagal' }}!</strong> {{ message }}</span>
-              <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </div>
-          {% endfor %}
-        {% endif %}
-      {% endwith %}
+      <div id="alert-container"></div>
     </div>
   </div>
 </div>
@@ -40,11 +29,11 @@
     <div class="col-xl-4">
       <div class="card shadow border-0">
         <div class="card-header bg-transparent pb-2">
-          <h3 class="mb-0 text-uppercase text-dark"><i class="fas fa-utensils mr-2 text-muted"></i>Susun Paket SOP</h3>
-          <small class="text-muted">Setiap tanggal hanya diperbolehkan memiliki 1 menu harian.</small>
+          <h3 class="mb-0 text-uppercase text-dark"><i class="fas fa-paper-plane mr-2 text-primary"></i>Publikasi Menu Harian</h3>
+          <small class="text-muted">Menu ini akan muncul otomatis di aplikasi Flutter penerima.</small>
         </div>
         <div class="card-body pt-2">
-          <form id="form-susun-mbg" enctype="multipart/form-data" method="POST" action="{{ url_for('home_blueprint.api_simpan_menu_katalog') }}">
+          <form id="form-susun-mbg" enctype="multipart/form-data">
             
             <div class="form-group mb-3">
                 <label class="form-control-label text-dark">Tanggal Distribusi</label>
@@ -52,69 +41,79 @@
             </div>
 
             <div class="form-group mb-2">
-              <label class="text-xs font-weight-bold text-dark">1. KARBOHIDRAT</label>
-              <select class="form-control custom-select-mbg text-dark" name="karbo_id" required>
-                <option value="">-- Pilih Karbohidrat --</option>
-                {% for item in recipes if item.category == 'Karbohidrat' %}
-                <option value="{{ item.id }}">{{ item.name }}</option>
+              <label class="text-xs font-weight-bold text-dark text-uppercase">1. Makanan Pokok</label>
+              <select class="form-control custom-select-mbg" name="karbo_id" id="karbo_id" required>
+                <option value="">-- Pilih --</option>
+                {% for item in recipes if item.category == 'Sumber Karbohidrat' %}
+                <option value="{{ item.id }}">{{ item.name }} ({{ item.weight|int }}g)</option>
                 {% endfor %}
               </select>
             </div>
 
             <div class="form-group mb-2">
-              <label class="text-xs font-weight-bold text-dark">2. PROTEIN HEWANI</label>
-              <select class="form-control custom-select-mbg text-dark" name="protein_h_id" required>
-                <option value="">-- Pilih Protein Hewani --</option>
+              <label class="text-xs font-weight-bold text-dark text-uppercase">2. Lauk Hewani</label>
+              <select class="form-control custom-select-mbg" name="protein_h_id" id="protein_h_id" required>
+                <option value="">-- Pilih --</option>
                 {% for item in recipes if item.category == 'Protein Hewani' %}
-                <option value="{{ item.id }}">{{ item.name }}</option>
+                <option value="{{ item.id }}">{{ item.name }} ({{ item.weight|int }}g)</option>
                 {% endfor %}
               </select>
             </div>
 
             <div class="form-group mb-2">
-              <label class="text-xs font-weight-bold text-dark">3. PROTEIN NABATI</label>
-              <select class="form-control custom-select-mbg text-dark" name="protein_n_id" required>
-                <option value="">-- Pilih Protein Nabati --</option>
+              <label class="text-xs font-weight-bold text-dark text-uppercase">3. Lauk Nabati</label>
+              <select class="form-control custom-select-mbg" name="protein_n_id" id="protein_n_id" required>
+                <option value="">-- Pilih --</option>
                 {% for item in recipes if item.category == 'Protein Nabati' %}
-                <option value="{{ item.id }}">{{ item.name }}</option>
+                <option value="{{ item.id }}">{{ item.name }} ({{ item.weight|int }}g)</option>
                 {% endfor %}
               </select>
             </div>
 
             <div class="form-group mb-2">
-              <label class="text-xs font-weight-bold text-dark">4. SAYURAN</label>
-              <select class="form-control custom-select-mbg text-dark" name="sayur_id" required>
-                <option value="">-- Pilih Sayuran --</option>
+              <label class="text-xs font-weight-bold text-dark text-uppercase">4. Sayuran</label>
+              <select class="form-control custom-select-mbg" name="sayur_id" id="sayur_id" required>
+                <option value="">-- Pilih --</option>
                 {% for item in recipes if item.category == 'Sayuran' %}
-                <option value="{{ item.id }}">{{ item.name }}</option>
+                <option value="{{ item.id }}">{{ item.name }} ({{ item.weight|int }}g)</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group mb-2">
+              <label class="text-xs font-weight-bold text-dark text-uppercase">5. Buah Segar</label>
+              <select class="form-control custom-select-mbg" name="buah_id" id="buah_id" required>
+                <option value="">-- Pilih --</option>
+                {% for item in recipes if item.category in ['Buah', 'Buah-buahan'] %}
+                <option value="{{ item.id }}">{{ item.name }} ({{ item.weight|int }}g)</option>
                 {% endfor %}
               </select>
             </div>
 
             <div class="form-group mb-3">
-              <label class="text-xs font-weight-bold text-dark">5. BUAH / SUSU</label>
-              <select class="form-control custom-select-mbg text-dark" name="susu_id" required>
-                <option value="">-- Pilih Buah atau Susu --</option>
-                {% for item in recipes if item.category in ['Buah/Susu', 'Tambahan', 'Buah'] or 'susu' in item.name|lower %}
-                <option value="{{ item.id }}">{{ item.name }}</option>
+              <label class="text-xs font-weight-bold text-dark text-uppercase">6. Susu (Opsional)</label>
+              <select class="form-control custom-select-mbg" name="susu_id" id="susu_id">
+                <option value="">-- Tanpa Susu --</option>
+                {% for item in recipes if item.category == 'Susu' %}
+                <option value="{{ item.id }}">{{ item.name }} ({{ item.weight|int }}ml)</option>
                 {% endfor %}
               </select>
             </div>
 
             <div class="form-group mb-4 mt-3">
-              <label class="form-control-label text-dark"><i class="fas fa-camera mr-1"></i>Foto Sajian (QC)</label>
+              <label class="form-control-label text-dark"><i class="fas fa-camera mr-1"></i>Foto Hasil Masakan (QC)</label>
               <div class="upload-preview-container mb-2" id="preview-box">
                   <i class="fas fa-image fa-2x text-lighter"></i>
                   <img id="image-preview" src="" alt="Preview" style="display: none;">
               </div>
               <div class="custom-file">
                 <input type="file" class="custom-file-input" id="input-foto" name="photo" accept="image/*" required>
-                <label class="custom-file-label text-muted" for="input-foto">Unggah hasil masakan...</label>
+                <label class="custom-file-label text-xs" for="input-foto">Pilih Foto Sajian...</label>
               </div>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-block shadow border-0 py-3">
-                <i class="fas fa-check-circle mr-2"></i>SIMPAN PAKET MENU
+            <button type="button" onclick="handlePublikasi()" id="btn-submit" class="btn btn-primary btn-block shadow-lg py-3 font-weight-bold">
+                <i class="fas fa-cloud-upload-alt mr-2"></i>PUBLIKASI PAKET MENU
             </button>
           </form>
         </div>
@@ -124,101 +123,138 @@
     <div class="col-xl-8">
       <div class="card shadow border-0">
         <div class="card-header border-0 d-flex justify-content-between align-items-center">
-          <h3 class="mb-0 text-uppercase text-dark"><i class="fas fa-history mr-2 text-muted"></i>Riwayat Distribusi</h3>
-          <small class="text-primary font-weight-bold">Akan tampil otomatis di Aplikasi Mobile</small>
+          <h3 class="mb-0 text-uppercase text-dark"><i class="fas fa-calendar-check mr-2 text-muted"></i>Status Menu di Aplikasi</h3>
+          <span class="badge badge-success badge-pill">Aktif di Flutter</span>
         </div>
         
         <div class="table-responsive">
           <table class="table align-items-center table-flush table-hover">
             <thead class="thead-light">
               <tr class="text-dark">
-                <th style="width: 150px;">TANGGAL</th>
-                <th>KOMPOSISI PAKET</th>
+                <th style="width: 140px;">TANGGAL</th>
+                <th>MENU HARIAN</th>
+                <th class="text-center">HASIL ANALISIS GIZI</th>
                 <th class="text-center">AKSI</th>
               </tr>
             </thead>
-            <tbody class="text-dark" style="font-size: 0.9rem;">
+            <tbody class="text-dark">
               {% for p in menus %}
               <tr>
-                <td class="font-weight-bold">
-                    <span class="badge badge-dot mr-4">
-                        <i class="bg-success"></i>
-                        <span class="status text-dark">{{ p.created_at.strftime('%d/%m/%Y') }}</span>
-                    </span>
+                <td class="font-weight-bold text-primary">
+                    {{ p.distribution_date.strftime('%d/%m/%Y') }}
                 </td>
                 <td>
-                  <div class="d-flex align-items-center">
-                    <div class="mr-3">
+                  <div class="media align-items-center">
+                    <div class="avatar rounded mr-3 bg-secondary">
                         {% if p.photo %}
-                            <img src="{{ url_for('static', filename='assets/img/menus/' + p.photo) }}" class="rounded shadow-sm" style="width: 50px; height: 50px; object-fit: cover;">
+                            <img src="{{ url_for('static', filename='uploads/menus/' + p.photo) }}" style="object-fit: cover;">
                         {% else %}
-                            <div class="avatar avatar-sm rounded bg-light"><i class="fas fa-utensils text-muted"></i></div>
+                            <i class="fas fa-utensils text-muted"></i>
                         {% endif %}
                     </div>
-                    <div>
-                        <span class="d-block font-weight-bold text-dark">{{ p.menu_name }}</span>
-                        <small class="text-muted">{{ p.total_kcal|int }} kkal | {{ p.total_protein|int }}g Protein</small>
+                    <div class="media-body">
+                      <span class="name mb-0 text-sm font-weight-bold d-block text-wrap" style="max-width: 250px;">{{ p.menu_name }}</span>
                     </div>
                   </div>
                 </td>
                 <td class="text-center">
-                    <a href="{{ url_for('home_blueprint.hapus_menu', id=p.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Hapus menu tanggal ini? Menu tidak akan tampil lagi di mobile.')">
-                        <i class="fas fa-trash"></i> Hapus
+                    <div class="mb-1"><span class="badge badge-soft-primary">{{ p.total_kcal|int }} kkal</span></div>
+                    <div class="text-xs">
+                        <span class="text-success">Fe: <b>{{ p.total_iron }}mg</b></span> | 
+                        <span class="text-info">Ca: <b>{{ p.total_calcium }}mg</b></span>
+                    </div>
+                </td>
+                <td class="text-center">
+                    <a class="btn btn-sm btn-icon-only text-danger" href="{{ url_for('home_blueprint.hapus_menu', id=p.id) }}" onclick="return confirm('Hapus jadwal menu?')">
+                        <i class="fas fa-trash"></i>
                     </a>
                 </td>
               </tr>
               {% else %}
-              <tr>
-                <td colspan="3" class="text-center py-5 text-muted">
-                    <img src="/static/assets/img/theme/empty.png" style="width: 80px; opacity: 0.5;" class="mb-3 d-block mx-auto">
-                    Belum ada riwayat distribusi harian.
-                </td>
-              </tr>
+              <tr><td colspan="4" class="text-center py-5 text-muted">Belum ada paket menu.</td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
       </div>
+
+      <div class="card shadow border-0 mt-3" style="background-color: #e8f0fe;">
+        <div class="card-body py-3">
+            <h5 class="text-primary text-uppercase mb-2" style="font-size: 0.8rem;"><i class="fas fa-info-circle mr-2"></i>Sinkronisasi Mobile</h5>
+            <p class="text-dark text-xs mb-0">Menu yang Anda simpan di sini akan langsung dikalkulasi gizinya oleh server dan ditampilkan pada tab <b>"Jadwal"</b> di aplikasi Flutter penerima manfaat.</p>
+        </div>
+      </div>
     </div>
 
   </div>
-  {% include "includes/footer.html" %}
 </div>
 {% endblock content %}
 
 {% block javascripts %}
 <script>
-  // Script Preview Foto Sajian
+  // Fungsi Submit via AJAX agar langsung muncul di Flutter
+  async function handlePublikasi() {
+      const form = document.getElementById('form-susun-mbg');
+      const btn = document.getElementById('btn-submit');
+      const formData = new FormData(form);
+      const photoFile = document.getElementById('input-foto').files[0];
+
+      if (!photoFile) { alert("Foto masakan (QC) wajib diunggah!"); return; }
+      formData.append('photo', photoFile);
+
+      // Loading state
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menghitung Gizi...';
+
+      try {
+          const response = await fetch("{{ url_for('home_blueprint.api_simpan_menu_katalog') }}", {
+              method: 'POST',
+              body: formData
+          });
+          const result = await response.json();
+
+          if (result.status === 'success') {
+              alert("Menu Berhasil Dipublikasi ke Flutter!");
+              window.location.reload();
+          } else {
+              alert("Gagal: " + result.message);
+          }
+      } catch (error) {
+          console.error(error);
+          alert("Terjadi kesalahan jaringan.");
+      } finally {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-cloud-upload-alt mr-2"></i>PUBLIKASI PAKET MENU';
+      }
+  }
+
+  // Preview Foto QC
   document.getElementById('input-foto').onchange = function(evt) {
     const [file] = this.files;
     if (file) {
       const previewImg = document.getElementById('image-preview');
       const previewBox = document.getElementById('preview-box');
-      
       previewImg.src = URL.createObjectURL(file);
       previewImg.style.display = 'block';
       previewBox.querySelector('i').style.display = 'none';
-      
       this.nextElementSibling.innerText = file.name;
     }
   };
 
-  // Set default tanggal hari ini pada input date
-  document.addEventListener('DOMContentLoaded', function() {
-      const dateInput = document.getElementById('tgl_distribusi');
-      const today = new Date().toISOString().split('T')[0];
-      dateInput.value = today;
+  document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('tgl_distribusi').value = new Date().toISOString().split('T')[0];
   });
 </script>
 
 <style>
   .upload-preview-container {
-    width: 100%; height: 160px; border: 2px dashed #e9ecef; border-radius: 8px;
+    width: 100%; height: 140px; border: 2px dashed #dee2e6; border-radius: 10px;
     display: flex; align-items: center; justify-content: center; background-color: #f8f9fe;
     overflow: hidden;
   }
   #image-preview { width: 100%; height: 100%; object-fit: cover; }
-  .custom-select-mbg { background-color: #ffffff; border: 1px solid #dee2e6; height: 45px !important; }
-  .alert { position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .custom-select-mbg { border: 1px solid #dee2e6; height: 42px !important; font-size: 0.85rem; }
+  .badge-soft-primary { background-color: #e0e7ff; color: #4338ca; }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
 </style>
 {% endblock javascripts %}

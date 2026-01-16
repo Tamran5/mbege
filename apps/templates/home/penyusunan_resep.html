@@ -1,262 +1,483 @@
-{% extends 'layouts/base.html' %}
-
-{% block title %} Master Bahan Baku - Standar MBG 2025 {% endblock title %}
-
-{% block content %}
+{% extends 'layouts/base.html' %} {% block title %} Kamus Komposisi Pangan -
+Standar MBG 2025 {% endblock title %} {% block content %}
 <div class="header bg-primary pb-6">
-    <div class="container-fluid">
-        <div class="header-body">
-            <div class="row align-items-center py-4">
-                <div class="col-lg-6">
-                    <h6 class="h2 text-white d-inline-block mb-0">Manajemen Gizi</h6>
-                    <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
-                        <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
-                            <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
-                            <li class="breadcrumb-item active">Master Bahan Baku</li>
-                        </ol>
-                    </nav>
-                </div>
-            </div>
+  <div class="container-fluid">
+    <div class="header-body">
+      <div class="row align-items-center py-4">
+        <div class="col-lg-6">
+          <h6 class="h2 text-white d-inline-block mb-0">
+            Perencanaan Menu MBG
+          </h6>
+          <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+            <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+              <li class="breadcrumb-item">
+                <a href="#"><i class="fas fa-utensils"></i></a>
+              </li>
+              <li class="breadcrumb-item active">Kamus Komposisi Pangan</li>
+            </ol>
+          </nav>
         </div>
+      </div>
     </div>
+  </div>
 </div>
 
 <div class="container-fluid mt--6">
-    <div class="row">
-        <div class="col-xl-4">
-            <div class="card shadow border-0">
-                <div class="card-header border-0">
-                    <h3 class="mb-0 text-uppercase text-dark"><i class="fas fa-plus-circle mr-2 text-primary"></i>Tambah Komponen</h3>
-                </div>
-                <div class="card-body pt-0">
-                    <form id="recipe-form">
-                        <div class="form-group mb-2">
-                            <label class="form-control-label text-sm text-dark">Nama Bahan Baku</label>
-                            <input type="text" id="input-ingredient" class="form-control" placeholder="Contoh: Ayam Fillet" required>
-                        </div>
-
-                        <div class="form-group mb-2">
-                            <label class="form-control-label text-sm text-dark">Kategori</label>
-                            <select id="input-category" class="form-control">
-                                <option value="Karbohidrat">1. Karbohidrat</option>
-                                <option value="Protein Hewani">2. Protein Hewani</option>
-                                <option value="Protein Nabati">3. Protein Nabati</option>
-                                <option value="Sayuran">4. Sayuran</option>
-                                <option value="Buah/Susu">5. Buah / Susu</option>
-                            </select>
-                        </div>
-
-                        <div class="p-3 rounded mb-3" style="background-color: #f6f9fc; border: 1px solid #e9ecef;">
-                            <h6 class="text-uppercase text-muted ls-1 mb-3" style="font-size: 0.7rem;">Kandungan Gizi (Per 100gr)</h6>
-                            <div class="row mb-2">
-                                <div class="col-6"><label class="text-xs text-dark">Energi (kkal)</label><input type="number" id="input-kcal" class="form-control form-control-sm"></div>
-                                <div class="col-6"><label class="text-xs text-dark">Protein (g)</label><input type="number" id="input-prot" class="form-control form-control-sm"></div>
-                            </div>
-                            <div class="row mb-2">
-                                <div class="col-6"><label class="text-xs text-dark">Lemak (g)</label><input type="number" id="input-fat" class="form-control form-control-sm"></div>
-                                <div class="col-6"><label class="text-xs text-dark">Karbohidrat (g)</label><input type="number" id="input-carb" class="form-control form-control-sm"></div>
-                            </div>
-                            <div class="row border-top pt-2">
-                                <div class="col-4"><label class="text-xs text-dark">Serat (g)</label><input type="number" id="input-fiber" class="form-control form-control-sm"></div>
-                                <div class="col-4"><label class="text-xs text-dark">Kalsium (mg)</label><input type="number" id="input-calcium" class="form-control form-control-sm"></div>
-                                <div class="col-4"><label class="text-xs text-dark">Zat Besi (mg)</label><input type="number" id="input-iron" class="form-control form-control-sm"></div>
-                            </div>
-                        </div>
-
-                        <button type="button" class="btn btn-primary btn-block shadow" onclick="addIngredient()">
-                            <i class="fas fa-save mr-1"></i>Simpan ke Database
-                        </button>
-                    </form>
-                </div>
-            </div>
+  <div class="row">
+    <div class="col-xl-4">
+      <div class="card shadow border-0">
+        <div class="card-header border-0">
+          <h3 class="mb-0 text-uppercase text-dark">
+            <i class="fas fa-plus-circle mr-2 text-primary"></i>Tambah Komponen
+            Menu
+          </h3>
         </div>
-
-        <div class="col-xl-8">
-            <div class="card shadow border-0">
-                <div class="card-header border-0">
-                    <div class="row align-items-center">
-                        <div class="col"><h3 class="mb-0 text-uppercase text-dark">Database Bahan Baku</h3></div>
-                        <div class="col text-right">
-                            <input type="text" id="searchInput" class="form-control form-control-sm d-inline-block w-50" placeholder="Cari bahan..." onkeyup="searchTable()">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="table-responsive">
-                    <table class="table align-items-center table-flush" id="recipe-table">
-                        <thead class="thead-light">
-                            <tr class="text-dark">
-                                <th>Bahan</th>
-                                <th class="text-center">Energi</th>
-                                <th class="text-center">Protein</th>
-                                <th class="text-center">Karbo</th>
-                                <th class="text-center">Mikro</th>
-                                <th class="text-center">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody class="text-dark">
-                            {% for item in ingredients %}
-                            <tr id="row-{{ item.id }}">
-                                <td>
-                                    <span class="name font-weight-bold d-block text-sm">{{ item.name }}</span>
-                                    <small class="text-muted">{{ item.category }}</small>
-                                </td>
-                                <td class="text-center">{{ item.kcal|int }}</td>
-                                <td class="text-center">{{ item.protein }}g</td>
-                                <td class="text-center">{{ item.carb }}g</td>
-                                <td class="text-center text-xs">
-                                    Serat: {{ item.fiber }}g | Kalsium: {{ item.calcium }}mg
-                                </td>
-                                <td class="text-center">
-                                    <button class="btn btn-sm btn-link text-dark p-1" 
-                                        data-id="{{ item.id }}" data-name="{{ item.name }}" data-category="{{ item.category }}"
-                                        data-kcal="{{ item.kcal }}" data-prot="{{ item.protein }}" data-fat="{{ item.fat }}" data-carb="{{ item.carb }}"
-                                        data-fiber="{{ item.fiber }}" data-calcium="{{ item.calcium }}" data-iron="{{ item.iron }}"
-                                        onclick="openEditModal(this)"><i class="fas fa-edit"></i></button>
-                                    <button class="btn btn-sm btn-link text-danger p-1" onclick="deleteIngredient('{{ item.id }}')"><i class="fas fa-trash"></i></button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+        <div class="card-body pt-0">
+          <form id="recipe-form">
+            <div class="form-group mb-2">
+              <label class="form-control-label text-sm text-dark"
+                >Nama Komponen Pangan</label
+              >
+              <input
+                type="text"
+                id="input-ingredient"
+                class="form-control"
+                placeholder="Contoh: Ikan Kembung, Telur Ayam"
+                required
+              />
             </div>
+
+            <div class="row">
+              <div class="col-6">
+                <div class="form-group mb-2">
+                  <label class="form-control-label text-sm text-dark"
+                    >Kelompok Pangan</label
+                  >
+                  <select id="input-category" class="form-control">
+                    <option value="Sumber Karbohidrat">Karbohidrat</option>
+                    <option value="Protein Hewani">Protein Hewani</option>
+                    <option value="Protein Nabati">Protein Nabati</option>
+                    <option value="Sayuran">Sayuran</option>
+                    <option value="Buah-buahan">Buah-buahan</option>
+                    <option value="Susu">Susu</option>
+                    <option value="Lemak & Minyak">Lemak & Minyak</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="form-group mb-2">
+                  <label class="form-control-label text-sm text-dark"
+                    >Berat Standar (gr)</label
+                  >
+                  <input
+                    type="number"
+                    id="input-weight"
+                    class="form-control"
+                    placeholder="Porsi (gr)"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="p-3 rounded mb-3"
+              style="background-color: #f6f9fc; border: 1px solid #e9ecef"
+            >
+              <div class="row mb-2">
+                <div class="col-6">
+                  <label class="text-xs text-dark">Energi (kkal)</label
+                  ><input
+                    type="number"
+                    id="input-kcal"
+                    class="form-control form-control-sm"
+                  />
+                </div>
+                <div class="col-6">
+                  <label class="text-xs text-dark">Protein (g)</label
+                  ><input
+                    type="number"
+                    id="input-prot"
+                    class="form-control form-control-sm"
+                  />
+                </div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-6">
+                  <label class="text-xs text-dark">Lemak (g)</label
+                  ><input
+                    type="number"
+                    id="input-fat"
+                    class="form-control form-control-sm"
+                  />
+                </div>
+                <div class="col-6">
+                  <label class="text-xs text-dark">Karbohidrat (g)</label
+                  ><input
+                    type="number"
+                    id="input-carb"
+                    class="form-control form-control-sm"
+                  />
+                </div>
+              </div>
+              <div class="row border-top pt-2">
+                <div class="col-4">
+                  <label class="text-xs text-dark">Serat (g)</label
+                  ><input
+                    type="number"
+                    id="input-fiber"
+                    class="form-control form-control-sm"
+                  />
+                </div>
+                <div class="col-4">
+                  <label class="text-xs text-dark">Kalsium (mg)</label
+                  ><input
+                    type="number"
+                    id="input-calcium"
+                    class="form-control form-control-sm"
+                  />
+                </div>
+                <div class="col-4">
+                  <label class="text-xs text-dark">Zat Besi (mg)</label
+                  ><input
+                    type="number"
+                    id="input-iron"
+                    class="form-control form-control-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              class="btn btn-primary btn-block shadow"
+              onclick="addIngredient()"
+            >
+              <i class="fas fa-save mr-1"></i>Daftarkan Komponen
+            </button>
+          </form>
         </div>
+      </div>
     </div>
+
+    <div class="col-xl-8">
+      <div class="card shadow border-0">
+        <div class="card-header border-0">
+          <div class="row align-items-center">
+            <div class="col">
+              <h3 class="mb-0 text-uppercase text-dark">
+                Database Komposisi Pangan
+              </h3>
+            </div>
+            <div class="col text-right">
+              <input
+                type="text"
+                id="searchInput"
+                class="form-control form-control-sm d-inline-block w-50"
+                placeholder="Cari komponen pangan..."
+                onkeyup="searchTable()"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table align-items-center table-flush" id="recipe-table">
+            <thead class="thead-light">
+              <tr class="text-dark">
+                <th>Komponen & Kelompok</th>
+                <th class="text-center">Berat Porsi</th>
+                <th class="text-center">Energi</th>
+                <th class="text-center">Protein</th>
+                <th class="text-center">Karbohidrat</th>
+                <th class="text-center">Mikronutrien</th>
+                <th class="text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="text-dark">
+              {% for item in ingredients %}
+              <tr id="row-{{ item.id }}">
+                <td>
+                  <span class="name font-weight-bold d-block text-sm"
+                    >{{ item.name }}</span
+                  >
+                  <small class="text-muted">{{ item.category }}</small>
+                </td>
+                <td class="text-center font-weight-bold">
+                  {{ item.weight|int }}g
+                </td>
+                <td class="text-center">{{ item.kcal|int }} kkal</td>
+                <td class="text-center">{{ item.protein }}g</td>
+                <td class="text-center">{{ item.carb }}g</td>
+                <td class="text-center text-xs">
+                  Serat: {{ item.fiber }}g | Kalsium: {{ item.calcium }}mg
+                </td>
+                <td class="text-center">
+                  <button
+                    class="btn btn-sm btn-link text-dark p-1"
+                    data-id="{{ item.id }}"
+                    data-name="{{ item.name }}"
+                    data-category="{{ item.category }}"
+                    data-weight="{{ item.weight }}"
+                    data-kcal="{{ item.kcal }}"
+                    data-prot="{{ item.protein }}"
+                    data-fat="{{ item.fat }}"
+                    data-carb="{{ item.carb }}"
+                    data-fiber="{{ item.fiber }}"
+                    data-calcium="{{ item.calcium }}"
+                    data-iron="{{ item.iron }}"
+                    onclick="openEditModal(this)"
+                  >
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button
+                    class="btn btn-sm btn-link text-danger p-1"
+                    onclick="deleteIngredient('{{ item.id }}')"
+                  >
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="modal fade" id="editModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header border-bottom">
-                <h5 class="modal-title font-weight-bold text-dark">EDIT BAHAN BAKU</h5>
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title font-weight-bold text-dark">
+          EDIT KOMPOSISI PANGAN
+        </h5>
+        <button type="button" class="close" data-dismiss="modal">
+          <span>&times;</span>
+        </button>
+      </div>
+      <div class="modal-body bg-secondary pt-3">
+        <form id="edit-form">
+          <input type="hidden" id="edit-id" />
+          <div class="row mb-3">
+            <div class="col-5">
+              <label class="form-control-label text-sm text-dark"
+                >Nama Komponen</label
+              >
+              <input
+                type="text"
+                id="edit-name"
+                class="form-control border-0 shadow-sm"
+              />
             </div>
-            <div class="modal-body bg-secondary pt-3">
-                <form id="edit-form">
-                    <input type="hidden" id="edit-id">
-                    <div class="row mb-3">
-                        <div class="col-6">
-                            <label class="form-control-label text-sm text-dark">Nama Bahan</label>
-                            <input type="text" id="edit-name" class="form-control border-0 shadow-sm">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-control-label text-sm text-dark">Kategori</label>
-                            <select id="edit-category" class="form-control border-0 shadow-sm">
-                                <option value="Karbohidrat">Karbohidrat</option>
-                                <option value="Protein Hewani">Protein Hewani</option>
-                                <option value="Protein Nabati">Protein Nabati</option>
-                                <option value="Sayuran">Sayuran</option>
-                                <option value="Buah/Susu">Buah/Susu</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-3"><label class="text-xs text-dark">Energi</label><input type="number" id="edit-kcal" class="form-control form-control-sm border-0 shadow-sm"></div>
-                        <div class="col-3"><label class="text-xs text-dark">Protein</label><input type="number" id="edit-prot" class="form-control form-control-sm border-0 shadow-sm"></div>
-                        <div class="col-3"><label class="text-xs text-dark">Lemak</label><input type="number" id="edit-fat" class="form-control form-control-sm border-0 shadow-sm"></div>
-                        <div class="col-3"><label class="text-xs text-dark">Karbo</label><input type="number" id="edit-carb" class="form-control form-control-sm border-0 shadow-sm"></div>
-                    </div>
-                    <div class="row">
-                        <div class="col-4"><label class="text-xs text-dark">Serat (g)</label><input type="number" id="edit-fiber" class="form-control form-control-sm border-0 shadow-sm"></div>
-                        <div class="col-4"><label class="text-xs text-dark">Kalsium (mg)</label><input type="number" id="edit-calcium" class="form-control form-control-sm border-0 shadow-sm"></div>
-                        <div class="col-4"><label class="text-xs text-dark">Zat Besi (mg)</label><input type="number" id="edit-iron" class="form-control form-control-sm border-0 shadow-sm"></div>
-                    </div>
-                </form>
+            <div class="col-4">
+              <label class="form-control-label text-sm text-dark"
+                >Kelompok Pangan</label
+              >
+              <select
+                id="edit-category"
+                class="form-control border-0 shadow-sm"
+              >
+                <option value="Sumber Karbohidrat">Sumber Karbohidrat</option>
+                <option value="Protein Hewani">Protein Hewani</option>
+                <option value="Protein Nabati">Protein Nabati</option>
+                <option value="Sayuran">Sayuran</option>
+                <option value="Buah-buahan">Buah-buahan</option>
+                <option value="Susu">Susu</option>
+                <option value="Lemak & Minyak">Lemak & Minyak</option>
+              </select>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-link text-muted" data-dismiss="modal">Batal</button>
-                <button type="button" class="btn btn-primary px-4 shadow" onclick="saveEdit()">Simpan Perubahan</button>
+            <div class="col-3">
+              <label class="form-control-label text-sm text-dark"
+                >Berat (gr)</label
+              >
+              <input
+                type="number"
+                id="edit-weight"
+                class="form-control border-0 shadow-sm"
+              />
             </div>
-        </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-3">
+              <label class="text-xs text-dark">Energi</label
+              ><input
+                type="number"
+                id="edit-kcal"
+                class="form-control form-control-sm border-0 shadow-sm"
+              />
+            </div>
+            <div class="col-3">
+              <label class="text-xs text-dark">Protein</label
+              ><input
+                type="number"
+                id="edit-prot"
+                class="form-control form-control-sm border-0 shadow-sm"
+              />
+            </div>
+            <div class="col-3">
+              <label class="text-xs text-dark">Lemak</label
+              ><input
+                type="number"
+                id="edit-fat"
+                class="form-control form-control-sm border-0 shadow-sm"
+              />
+            </div>
+            <div class="col-3">
+              <label class="text-xs text-dark">Karbohidrat</label
+              ><input
+                type="number"
+                id="edit-carb"
+                class="form-control form-control-sm border-0 shadow-sm"
+              />
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-4">
+              <label class="text-xs text-dark">Serat (g)</label
+              ><input
+                type="number"
+                id="edit-fiber"
+                class="form-control form-control-sm border-0 shadow-sm"
+              />
+            </div>
+            <div class="col-4">
+              <label class="text-xs text-dark">Kalsium (mg)</label
+              ><input
+                type="number"
+                id="edit-calcium"
+                class="form-control form-control-sm border-0 shadow-sm"
+              />
+            </div>
+            <div class="col-4">
+              <label class="text-xs text-dark">Zat Besi (mg)</label
+              ><input
+                type="number"
+                id="edit-iron"
+                class="form-control form-control-sm border-0 shadow-sm"
+              />
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-link text-muted"
+          data-dismiss="modal"
+        >
+          Batal
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary px-4 shadow"
+          onclick="saveEdit()"
+        >
+          Simpan Perubahan
+        </button>
+      </div>
     </div>
+  </div>
 </div>
-{% endblock content %}
-
-{% block javascripts %}
+{% endblock content %} {% block javascripts %}
 <script>
-    // Logic Tambah (Sesuai SOP 2025)
-    function addIngredient() {
-        const payload = {
-            name: document.getElementById('input-ingredient').value,
-            category: document.getElementById('input-category').value,
-            kcal: parseFloat(document.getElementById('input-kcal').value) || 0,
-            prot: parseFloat(document.getElementById('input-prot').value) || 0,
-            fat: parseFloat(document.getElementById('input-fat').value) || 0,
-            carb: parseFloat(document.getElementById('input-carb').value) || 0,
-            fiber: parseFloat(document.getElementById('input-fiber').value) || 0,
-            calcium: parseFloat(document.getElementById('input-calcium').value) || 0,
-            iron: parseFloat(document.getElementById('input-iron').value) || 0
-        };
+  function addIngredient() {
+    const payload = {
+      name: document.getElementById("input-ingredient").value,
+      category: document.getElementById("input-category").value,
+      weight: parseFloat(document.getElementById("input-weight").value) || 0,
+      kcal: parseFloat(document.getElementById("input-kcal").value) || 0,
+      prot: parseFloat(document.getElementById("input-prot").value) || 0,
+      fat: parseFloat(document.getElementById("input-fat").value) || 0,
+      carb: parseFloat(document.getElementById("input-carb").value) || 0,
+      fiber: parseFloat(document.getElementById("input-fiber").value) || 0,
+      calcium: parseFloat(document.getElementById("input-calcium").value) || 0,
+      iron: parseFloat(document.getElementById("input-iron").value) || 0,
+    };
 
-        if (!payload.name) { alert("Nama bahan wajib diisi!"); return; }
-
-        fetch('/api/simpan-bahan-master', {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        }).then(res => res.json()).then(data => {
-            if (data.status === 'success') location.reload();
-            else alert("Error simpan: " + data.message);
-        });
+    if (!payload.name || !payload.weight) {
+      alert("Nama komponen dan Berat Standar wajib diisi!");
+      return;
     }
 
-    // Logic Buka Modal Edit (Load Data)
-    function openEditModal(btn) {
-        document.getElementById('edit-id').value = btn.getAttribute('data-id');
-        document.getElementById('edit-name').value = btn.getAttribute('data-name');
-        document.getElementById('edit-category').value = btn.getAttribute('data-category');
-        document.getElementById('edit-kcal').value = btn.getAttribute('data-kcal');
-        document.getElementById('edit-prot').value = btn.getAttribute('data-prot');
-        document.getElementById('edit-fat').value = btn.getAttribute('data-fat');
-        document.getElementById('edit-carb').value = btn.getAttribute('data-carb');
-        document.getElementById('edit-fiber').value = btn.getAttribute('data-fiber') || 0;
-        document.getElementById('edit-calcium').value = btn.getAttribute('data-calcium') || 0;
-        document.getElementById('edit-iron').value = btn.getAttribute('data-iron') || 0;
-        $('#editModal').modal('show');
-    }
+    fetch("/api/simpan-bahan-master", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === "success") location.reload();
+        else alert("Kesalahan penyimpanan data: " + data.message);
+      });
+  }
 
-    // Logic Simpan Perubahan (Save Data)
-    function saveEdit() {
-        const id = document.getElementById('edit-id').value;
-        const payload = {
-            name: document.getElementById('edit-name').value,
-            category: document.getElementById('edit-category').value,
-            kcal: parseFloat(document.getElementById('edit-kcal').value) || 0,
-            prot: parseFloat(document.getElementById('edit-prot').value) || 0,
-            fat: parseFloat(document.getElementById('edit-fat').value) || 0,
-            carb: parseFloat(document.getElementById('edit-carb').value) || 0,
-            fiber: parseFloat(document.getElementById('edit-fiber').value) || 0,
-            calcium: parseFloat(document.getElementById('edit-calcium').value) || 0,
-            iron: parseFloat(document.getElementById('edit-iron').value) || 0
-        };
+  function openEditModal(btn) {
+    document.getElementById("edit-id").value = btn.getAttribute("data-id");
+    document.getElementById("edit-name").value = btn.getAttribute("data-name");
+    document.getElementById("edit-category").value =
+      btn.getAttribute("data-category");
+    document.getElementById("edit-weight").value =
+      btn.getAttribute("data-weight");
+    document.getElementById("edit-kcal").value = btn.getAttribute("data-kcal");
+    document.getElementById("edit-prot").value = btn.getAttribute("data-prot");
+    document.getElementById("edit-fat").value = btn.getAttribute("data-fat");
+    document.getElementById("edit-carb").value = btn.getAttribute("data-carb");
+    document.getElementById("edit-fiber").value =
+      btn.getAttribute("data-fiber") || 0;
+    document.getElementById("edit-calcium").value =
+      btn.getAttribute("data-calcium") || 0;
+    document.getElementById("edit-iron").value =
+      btn.getAttribute("data-iron") || 0;
+    $("#editModal").modal("show");
+  }
 
-        fetch(`/api/update-bahan-master/${id}`, {
-            method: 'POST',
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        }).then(res => res.json()).then(data => {
-            if (data.status === 'success') location.reload();
-            else alert("Error update: " + data.message);
-        });
-    }
+  function saveEdit() {
+    const id = document.getElementById("edit-id").value;
+    const payload = {
+      name: document.getElementById("edit-name").value,
+      category: document.getElementById("edit-category").value,
+      weight: parseFloat(document.getElementById("edit-weight").value) || 0,
+      kcal: parseFloat(document.getElementById("edit-kcal").value) || 0,
+      prot: parseFloat(document.getElementById("edit-prot").value) || 0,
+      fat: parseFloat(document.getElementById("edit-fat").value) || 0,
+      carb: parseFloat(document.getElementById("edit-carb").value) || 0,
+      fiber: parseFloat(document.getElementById("edit-fiber").value) || 0,
+      calcium: parseFloat(document.getElementById("edit-calcium").value) || 0,
+      iron: parseFloat(document.getElementById("edit-iron").value) || 0,
+    };
 
-    // Search & Delete tetap sama
-    function searchTable() {
-        let input = document.getElementById("searchInput").value.toLowerCase();
-        let rows = document.querySelectorAll("#recipe-table tbody tr");
-        rows.forEach(row => {
-            let name = row.querySelector(".name").innerText.toLowerCase();
-            row.style.display = name.includes(input) ? "" : "none";
-        });
-    }
+    fetch(`/api/update-bahan-master/${id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === "success") location.reload();
+        else alert("Gagal memperbarui data: " + data.message);
+      });
+  }
 
-    function deleteIngredient(id) {
-        if (!confirm("Hapus bahan dari database?")) return;
-        fetch(`/api/hapus-bahan-master/${id}`, { method: 'DELETE' })
-        .then(res => res.json()).then(data => {
-            if (data.status === 'success') document.getElementById(`row-${id}`).remove();
-        });
-    }
+  function searchTable() {
+    let input = document.getElementById("searchInput").value.toLowerCase();
+    let rows = document.querySelectorAll("#recipe-table tbody tr");
+    rows.forEach((row) => {
+      let name = row.querySelector(".name").innerText.toLowerCase();
+      row.style.display = name.includes(input) ? "" : "none";
+    });
+  }
+
+  function deleteIngredient(id) {
+    if (!confirm("Hapus komponen pangan ini?")) return;
+    fetch(`/api/hapus-bahan-master/${id}`, { method: "DELETE" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === "success")
+          document.getElementById(`row-${id}`).remove();
+      });
+  }
 </script>
 {% endblock javascripts %}

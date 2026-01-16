@@ -2,7 +2,6 @@ let chartInstance = null;
 let allReviews = [];
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Set default tanggal hari ini di input
     const today = new Date().toISOString().split('T')[0];
     document.getElementById("filterTanggal").value = today;
     updateDashboard();
@@ -12,7 +11,7 @@ async function updateDashboard() {
     const selectedDate = document.getElementById("filterTanggal").value;
     
     try {
-        // Mengambil data real-time dari API Flask (IndoBERT)
+        // Endpoint disesuaikan dengan struktur statistik baru
         const response = await fetch(`/api/ulasan-stats?tanggal=${selectedDate}`);
         const data = await response.json();
 
@@ -26,7 +25,6 @@ async function updateDashboard() {
         const progressBar = document.getElementById("progressBarSat");
         progressBar.style.width = data.satisfaction;
         
-        // Warna bar dinamis
         const percent = parseInt(data.satisfaction);
         progressBar.className = percent < 50 ? "progress-bar bg-danger" : 
                                 (percent < 80 ? "progress-bar bg-warning" : "progress-bar bg-success");
@@ -34,7 +32,7 @@ async function updateDashboard() {
         // 2. Update Grafik Doughnut
         updateChart(data.chart_data);
 
-        // 3. Render Baris Tabel
+        // 3. Render Tabel Detail
         renderTabel();
 
     } catch (error) {
@@ -48,7 +46,7 @@ function updateChart(chartData) {
     
     if (chartInstance) chartInstance.destroy();
 
-    if (chartData.every(val => val === 0)) {
+    if (!chartData || chartData.every(val => val === 0)) {
         ctx.style.display = 'none';
         emptyMsg.style.display = 'block';
     } else {
@@ -83,21 +81,36 @@ function renderTabel() {
     const filteredData = allReviews.filter(item => filterJenis === "all" || item.status === filterJenis);
 
     if (filteredData.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='3' class='text-center py-4 text-muted'>Tidak ada ulasan</td></tr>";
+        tbody.innerHTML = "<tr><td colspan='3' class='text-center py-4 text-muted'>Tidak ada ulasan masuk</td></tr>";
         return;
     }
 
     filteredData.forEach(item => {
+        // --- LOGIKA BINTANG (Rating 1-5 dari Flutter) ---
+        let starHtml = '';
+        for (let i = 1; i <= 5; i++) {
+            starHtml += `<i class="fas fa-star ${i <= item.rating ? 'text-warning' : 'text-lighter'}" style="font-size: 11px;"></i>`;
+        }
+
+        // --- LOGIKA TAGS (Pilihan Cepat dari Flutter) ---
+        let tagsHtml = '';
+        if (item.tags && item.tags.length > 0) {
+            tagsHtml = item.tags.map(tag => 
+                `<span class="badge badge-pill badge-secondary mr-1" style="font-size: 9px; text-transform: none;">${tag}</span>`
+            ).join('');
+        }
+
         let badgeClass = item.status === 'positif' ? 'st-pos' : (item.status === 'negatif' ? 'st-neg' : 'st-neu');
         
         tbody.innerHTML += `
             <tr>
                 <td>
                     <div class="font-weight-bold text-dark">${item.penerima}</div>
-                    <span class="badge badge-secondary" style="font-size: 10px;">Penerima MBG</span>
+                    <div class="mt-1">${starHtml}</div>
                 </td>
                 <td class="text-wrap" style="max-width: 350px;">
-                    <span class="text-sm">"${item.text}"</span>
+                    <div class="mb-2">${tagsHtml}</div>
+                    <span class="text-sm text-muted">"${item.text || 'Tidak ada komentar'}"</span>
                 </td>
                 <td class="text-right">
                     <span class="status-badge ${badgeClass}">${item.status}</span>

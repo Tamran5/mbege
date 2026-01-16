@@ -1,0 +1,124 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<div class="header bg-primary pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6">
+                    <h6 class="h2 text-white d-inline-block mb-0">Manajemen Konten Edukasi</h6>
+                </div>
+                <div class="col-lg-6 text-right">
+                    <button class="btn btn-sm btn-neutral" data-toggle="modal" data-target="#modalArtikel" onclick="prepareAdd()">+ Artikel Baru</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt--6">
+    <div class="row">
+        <div class="col">
+            <div class="card shadow border-0">
+                <div class="table-responsive">
+                    <table class="table align-items-center table-flush">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Foto</th>
+                                <th>Judul</th>
+                                <th>Target</th>
+                                <th>Dibuat</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for art in artikel %}
+                            <tr>
+                                <td>
+                                    <img src="/static/uploads/articles/{{ art.foto or 'no-image.jpg' }}" class="rounded shadow-sm" width="60">
+                                </td>
+                                <td><span class="font-weight-bold">{{ art.judul }}</span></td>
+                                <td>
+                                    <span class="badge badge-dot mr-4">
+                                        <i class="bg-info"></i> <span class="status">{{ art.target_role | capitalize }}</span>
+                                    </span>
+                                </td>
+                                <td>{{ art.created_at.strftime('%d/%m/%y') }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            onclick="prepareEdit('{{ art.id }}', '{{ art.judul }}', '{{ art.target_role }}', `{{ art.konten }}`)">
+                                        Edit
+                                    </button>
+                                    <a href="{{ url_for('home_blueprint.hapus_artikel', id=art.id) }}" 
+                                       class="btn btn-sm btn-outline-danger" 
+                                       onclick="return confirm('Hapus artikel ini?')">Hapus</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalArtikel" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <form class="modal-content" action="{{ url_for('home_blueprint.simpan_artikel') }}" method="POST" enctype="multipart/form-data">
+            <div class="modal-header shadow-sm">
+                <h5 class="modal-title" id="modalTitle">Tambah Artikel</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="id" id="art_id">
+                <div class="form-group">
+                    <label class="form-control-label">Target Pembaca</label>
+                    <select name="target_role" id="art_target" class="form-control" required>
+                        <option value="siswa">Khusus Siswa</option>
+                        <option value="lansia">Khusus Lansia</option>
+                        <option value="semua">Semua (Siswa & Lansia)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-control-label">Judul Artikel</label>
+                    <input type="text" name="judul" id="art_judul" class="form-control" placeholder="Masukkan judul..." required>
+                </div>
+                <div class="form-group">
+                    <label class="form-control-label">Konten Artikel</label>
+                    <textarea name="konten" id="art_konten" class="form-control" rows="8" placeholder="Tulis isi artikel..." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-control-label">Foto Sampul</label>
+                    <input type="file" name="foto" class="form-control">
+                    <small class="text-muted">Format: JPG/PNG. Kosongkan jika tidak ingin mengubah gambar.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary shadow-sm">Simpan Data</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+    function prepareAdd() {
+        $('#modalTitle').text('Tambah Artikel Baru');
+        $('#art_id').val('');
+        $('#art_judul').val('');
+        $('#art_konten').val('');
+        $('#art_target').val('siswa');
+    }
+
+    function prepareEdit(id, judul, target, konten) {
+        $('#modalTitle').text('Edit Artikel');
+        $('#art_id').val(id);
+        $('#art_judul').val(judul);
+        $('#art_target').val(target);
+        $('#art_konten').val(konten);
+        $('#modalArtikel').modal('show');
+    }
+</script>
+{% endblock %}

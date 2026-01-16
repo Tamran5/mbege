@@ -21,7 +21,12 @@ def register_extensions(app):
     mail.init_app(app) 
     
     # CORS tetap diaktifkan untuk mendukung Flutter Web
-    CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+    # CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+    CORS(app, resources={r"/api/*": {
+        "origins": "*",
+        "methods": ["POST", "GET", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }})
 
 def register_blueprints(app):
     # 1. Dashboard Web (HTML)

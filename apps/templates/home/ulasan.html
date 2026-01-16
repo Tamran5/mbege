@@ -1,10 +1,10 @@
 {% extends 'layouts/base.html' %}
 
-{% block title %} Ulasan Penerima {% endblock title %}
+{% block title %} Analisis Sentimen MBG {% endblock title %}
 
 {% block stylesheets %}
 <link rel="stylesheet" href="/static/assets/css/ulasan.css">
-<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 {% endblock stylesheets %}
 
 {% block content %}
@@ -14,16 +14,16 @@
         <div class="header-body">
             <div class="row align-items-center py-4">
                 <div class="col-lg-6 col-7">
-                    <nav aria-label="breadcrumb" class="d-none d-md-inline-block">
+                    <h6 class="h2 text-white d-inline-block mb-0">Ulasan Penerima</h6>
+                    <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
                         <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
                             <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Analisis Sentimen MBG</li>
+                            <li class="breadcrumb-item active">Sentimen AI</li>
                         </ol>
                     </nav>
                 </div>
-                
                 <div class="col-lg-6 col-5 text-right">
-                    <input type="date" id="filterTanggal" class="date-filter-control" onchange="updateDashboard()">
+                    <input type="date" id="filterTanggal" class="form-control form-control-sm d-inline-block w-auto" onchange="updateDashboard()">
                 </div>
             </div>
             
@@ -42,7 +42,6 @@
                                     </div>
                                 </div>
                             </div>
-                            <p class="mt-3 mb-0 text-sm text-muted">Data masuk hari ini</p>
                         </div>
                     </div>
                 </div>
@@ -52,7 +51,7 @@
                         <div class="card-body">
                             <div class="row">
                                 <div class="col">
-                                    <h5 class="card-title text-uppercase text-muted mb-0">Kepuasan</h5>
+                                    <h5 class="card-title text-uppercase text-muted mb-0">Kepuasan Siswa</h5>
                                     <span class="h2 font-weight-bold mb-0" id="valSatisfaction">0%</span>
                                 </div>
                                 <div class="col-auto">
@@ -61,12 +60,11 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="progress-wrapper">
-                                <div class="progress">
-                                    <div class="progress-bar bg-success" role="progressbar" id="progressBarSat" style="width: 0%;"></div>
+                            <div class="progress-wrapper mt-3">
+                                <div class="progress progress-xs mb-0">
+                                    <div id="progressBarSat" class="progress-bar" role="progressbar" style="width: 0%;"></div>
                                 </div>
                             </div>
-                            <p class="mt-2 mb-0 text-sm text-muted">Sentimen Positif</p>
                         </div>
                     </div>
                 </div>
@@ -76,7 +74,7 @@
                         <div class="card-body">
                             <div class="row">
                                 <div class="col">
-                                    <h5 class="card-title text-uppercase text-muted mb-0">Perlu Perhatian</h5>
+                                    <h5 class="card-title text-uppercase text-muted mb-0">Komplain Negatif</h5>
                                     <span class="h2 font-weight-bold mb-0" id="valNegative">0</span>
                                 </div>
                                 <div class="col-auto">
@@ -85,9 +83,6 @@
                                     </div>
                                 </div>
                             </div>
-                            <p class="mt-3 mb-0 text-sm">
-                                <span class="text-danger mr-2 font-weight-bold">Komplain Negatif</span>
-                            </p>
                         </div>
                     </div>
                 </div>
@@ -101,14 +96,13 @@
         <div class="col-xl-4">
             <div class="card">
                 <div class="card-header bg-transparent">
-                    <h6 class="text-uppercase text-muted ls-1 mb-1">Ringkasan AI</h6>
-                    <h5 class="h3 mb-0">Grafik Sentimen</h5>
+                    <h5 class="h3 mb-0">Grafik Sentimen AI</h5>
                 </div>
                 <div class="card-body">
-                    <div class="chart-canvas-wrapper">
+                    <div style="position: relative; height: 250px;">
                         <canvas id="sentimenChart"></canvas>
-                        <div id="chartEmpty" style="display:none; position:absolute; top:45%; left:0; right:0; text-align:center; color:#8898aa;">
-                            Tidak ada data untuk tanggal ini
+                        <div id="chartEmpty" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:center;">
+                            <p class="text-muted small">Tidak ada data ulasan</p>
                         </div>
                     </div>
                 </div>
@@ -120,11 +114,11 @@
                 <div class="card-header border-0">
                     <div class="row align-items-center">
                         <div class="col">
-                            <h3 class="mb-0">Detail Ulasan Masuk</h3>
+                            <h3 class="mb-0">Daftar Ulasan Masuk</h3>
                         </div>
                         <div class="col text-right">
                             <select id="filterSentimen" class="form-control form-control-sm d-inline-block w-auto" onchange="renderTabel()">
-                                <option value="all">Semua Status</option>
+                                <option value="all">Semua Sentimen</option>
                                 <option value="positif">Positif</option>
                                 <option value="netral">Netral</option>
                                 <option value="negatif">Negatif</option>
@@ -136,12 +130,13 @@
                     <table class="table align-items-center table-flush">
                         <thead class="thead-light">
                             <tr>
-                                <th scope="col">Penerima</th>
-                                <th scope="col">Ulasan</th>
-                                <th scope="col" class="text-right">Status AI</th>
+                                <th scope="col" style="width: 25%;">Penerima & Rating</th>
+                                <th scope="col" style="width: 55%;">Ulasan & Tags</th>
+                                <th scope="col" class="text-right" style="width: 20%;">Status AI</th>
                             </tr>
                         </thead>
-                        <tbody id="tabelUlasan"></tbody>
+                        <tbody id="tabelUlasan">
+                            </tbody>
                     </table>
                 </div>
             </div>

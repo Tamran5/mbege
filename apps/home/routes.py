@@ -2,13 +2,15 @@
 import os
 import json
 import base64
-from datetime import datetime, date
+from sqlalchemy import func
+from datetime import datetime, date,timedelta
 from flask import render_template, request, redirect, url_for, flash, jsonify,session
 from flask_login import login_required, current_user
 from jinja2 import TemplateNotFound
 from werkzeug.utils import secure_filename
-
+from flask import current_app
 from apps import db
+from sqlalchemy.orm import aliased
 from apps.home import blueprint
 from apps.home.utils import get_sentiment_prediction
 from flask import jsonify
@@ -23,7 +25,7 @@ from flask_login import logout_user, current_user
 # --- IMPORT MODELS ---
 from apps.authentication.models import (
     Users, MasterIngredient, Menus, MenuIngredients, 
-    Staff, AttendanceLog, Penerima, AktivitasDapur,UlasanPenerima
+    Staff, AttendanceLog, Penerima, AktivitasDapur,UlasanPenerima,LogDistribusi,Artikel
 )
 
 # =========================================================
@@ -49,7 +51,7 @@ def restrict_web_access():
     exempt_paths = [
         url_for('authentication_blueprint.login'),
         url_for('authentication_blueprint.logout'),
-        url_for('home_blueprint.home'),
+        url_for('home_blueprint.index'),
         '/static/',
         '/api/'
     ]
@@ -78,29 +80,118 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-@blueprint.route('/')
-def home():
-    return render_template('home/home.html', segment='home')
-
 @blueprint.route('/dashboard')
 @login_required
 @admin_required
 def index():
-    """Endpoint: home_blueprint.index"""
-    role = getattr(current_user, 'role', None)
-
-    if role == 'super_admin':
-        return redirect(url_for('home_blueprint.dashboard_superadmin'))
+    # --- 1. Logika Statistik (Tetap sama) ---
+    Siswa = aliased(Users)
+    Sekolah = aliased(Users)
     
-    # Cek Approval untuk Admin Dapur
-    if role == 'admin_dapur' and not getattr(current_user, 'is_approved', False):
-        return render_template('home/pending_approval.html'), 200
+    total_siswa = db.session.query(func.count(Siswa.id))\
+        .select_from(Siswa)\
+        .join(Sekolah, Siswa.sekolah_id == Sekolah.id)\
+        .filter(Sekolah.dapur_id == current_user.id)\
+        .filter(Siswa.role == 'siswa', Siswa.is_approved == True).scalar() or 0
 
-    return render_template('home/index.html', segment='index')
+    antrian_verifikasi = Users.query.filter_by(dapur_id=current_user.id, is_approved=False).count()
 
+    porsi_hari_ini = db.session.query(func.sum(LogDistribusi.porsi_sampai))\
+        .filter(LogDistribusi.dapur_id == current_user.id)\
+        .filter(func.date(LogDistribusi.waktu_sampai) == date.today()).scalar() or 0
+
+    # --- 2. LOGIKA GRAFIK 7 HARI TERAKHIR ---
+    labels = []
+    data_porsi = []
+    
+    for i in range(6, -1, -1):
+        target_date = date.today() - timedelta(days=i)
+        
+        # Ambil total porsi pada tanggal tersebut
+        daily_sum = db.session.query(func.sum(LogDistribusi.porsi_sampai))\
+            .filter(LogDistribusi.dapur_id == current_user.id)\
+            .filter(func.date(LogDistribusi.waktu_sampai) == target_date).scalar() or 0
+        
+        # Simpan label (Nama Hari) dan datanya
+        labels.append(target_date.strftime('%a')) # Hasil: 'Mon', 'Tue', dst.
+        data_porsi.append(int(daily_sum))
+
+    stats = {
+        'total_siswa': total_siswa,
+        'antrian': antrian_verifikasi,
+        'porsi': porsi_hari_ini,
+        'kepuasan': "94%",
+        'chart_labels': labels, # Kirim ke frontend
+        'chart_data': data_porsi   # Kirim ke frontend
+    }
+
+    recent_arrivals = LogDistribusi.query.filter_by(dapur_id=current_user.id)\
+                      .order_by(LogDistribusi.waktu_sampai.desc()).limit(5).all()
+
+    return render_template('home/index.html', stats=stats, arrivals=recent_arrivals, segment='index')
 # =========================================================
 #  PROFILE 
 # =========================================================
+
+
+@blueprint.route('/manajemen-artikel')
+@login_required
+@admin_required
+def daftar_artikel():
+    # Mengambil hanya artikel milik dapur ini
+    list_artikel = Artikel.query.filter_by(dapur_id=current_user.id).order_by(Artikel.created_at.desc()).all()
+    return render_template('home/manajemen_artikel.html', artikel=list_artikel, segment='manajemen_artikel')
+
+@blueprint.route('/manajemen-artikel/simpan', methods=['POST'])
+@login_required
+@admin_required
+def simpan_artikel():
+    artikel_id = request.form.get('id')
+    judul = request.form.get('judul')
+    konten = request.form.get('konten')
+    target = request.form.get('target_role') # 'siswa', 'lansia', atau 'semua'
+    
+    # Penanganan Upload Foto
+    foto_file = request.files.get('foto')
+    filename = None
+    if foto_file:
+        filename = secure_filename(f"art_{current_user.id}_{int(datetime.now().timestamp())}.jpg")
+        path = os.path.join(current_app.root_path, 'static/uploads/articles')
+        os.makedirs(path, exist_ok=True)
+        foto_file.save(os.path.join(path, filename))
+
+    if artikel_id: # Mode Edit
+        art = Artikel.query.get(artikel_id)
+        if art and art.dapur_id == current_user.id:
+            art.judul = judul
+            art.konten = konten
+            art.target_role = target
+            if filename:
+                # Hapus foto lama jika ada penggantian
+                if art.foto:
+                    old_path = os.path.join(current_app.root_path, 'static/uploads/articles', art.foto)
+                    if os.path.exists(old_path): os.remove(old_path)
+                art.foto = filename
+    else: # Mode Tambah Baru
+        new_art = Artikel(judul=judul, konten=konten, foto=filename, target_role=target, dapur_id=current_user.id)
+        db.session.add(new_art)
+    
+    db.session.commit()
+    return redirect(url_for('home_blueprint.daftar_artikel'))
+
+@blueprint.route('/manajemen-artikel/hapus/<int:id>')
+@login_required
+@admin_required
+def hapus_artikel(id):
+    art = Artikel.query.get_or_404(id)
+    # Validasi kepemilikan sebelum hapus
+    if art.dapur_id == current_user.id:
+        if art.foto:
+            path = os.path.join(current_app.root_path, 'static/uploads/articles', art.foto)
+            if os.path.exists(path): os.remove(path)
+        db.session.delete(art)
+        db.session.commit()
+    return redirect(url_for('home_blueprint.daftar_artikel'))
 
 @blueprint.route('/data-penerima')
 @login_required
@@ -257,12 +348,6 @@ def api_update_bahan(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 400
-    
-    
-
-# =========================================================
-#  KATALOG MENU (1 HARI 1 MENU VALIDATION)
-# =========================================================
 
 @blueprint.route('/katalog-menu')
 @login_required
@@ -272,7 +357,8 @@ def daftar_katalog():
         return render_template('home/pending_approval.html'), 200
         
     recipes = MasterIngredient.query.filter_by(user_id=current_user.id).all()
-    menus = Menus.query.filter_by(user_id=current_user.id).order_by(Menus.created_at.desc()).all()
+    # Mengurutkan berdasarkan tanggal distribusi terbaru
+    menus = Menus.query.filter_by(user_id=current_user.id).order_by(Menus.distribution_date.desc()).all()
     
     return render_template('home/katalog_menu.html', segment='katalog_menu', recipes=recipes, menus=menus)
 
@@ -281,117 +367,147 @@ def daftar_katalog():
 @admin_required
 def api_simpan_menu_katalog():
     try:
-        # 1. Validasi Batasan 1 Hari 1 Menu
-        tgl_input = request.form.get('tgl_distribusi') # format: YYYY-MM-DD
+        tgl_input = request.form.get('tgl_distribusi')
         target_date = datetime.strptime(tgl_input, '%Y-%m-%d').date()
 
-        # Cek apakah sudah ada menu di tanggal tersebut untuk user ini
-        existing_menu = Menus.query.filter(
-            Menus.user_id == current_user.id,
-            db.func.date(Menus.created_at) == target_date
+        existing_menu = Menus.query.filter_by(
+            user_id=current_user.id,
+            distribution_date=target_date
         ).first()
 
         if existing_menu:
-            flash(f"Gagal! Menu untuk tanggal {tgl_input} sudah ada. Silakan hapus menu lama terlebih dahulu jika ingin mengganti.", "danger")
-            return redirect(url_for('home_blueprint.daftar_katalog'))
+            return jsonify({'status': 'error', 'message': f'Menu untuk tanggal {tgl_input} sudah ada.'}), 400
 
-        # 2. Proses Upload Foto
-        file_foto = request.files.get('photo')
-        filename = None
-        if file_foto and allowed_file(file_foto.filename):
-            filename = secure_filename(file_foto.filename)
-            if not os.path.exists(UPLOAD_FOLDER):
-                os.makedirs(UPLOAD_FOLDER)
-            file_foto.save(os.path.join(UPLOAD_FOLDER, filename))
-
-        # 3. Ambil ID dari 5 Pilar & Kalkulasi Gizi
         pilar_ids = [
             request.form.get('karbo_id'),
             request.form.get('protein_h_id'),
             request.form.get('protein_n_id'),
             request.form.get('sayur_id'),
+            request.form.get('buah_id'),
             request.form.get('susu_id')
         ]
-        pilar_ids = [int(pid) for pid in pilar_ids if pid]
+        pilar_ids = [int(pid) for pid in pilar_ids if pid and pid.isdigit()]
 
         total_prot = 0.0; total_carb = 0.0; total_fat = 0.0; total_kcal = 0.0
-        total_fiber = 0.0; total_calcium = 0.0
+        total_fiber = 0.0; total_calcium = 0.0; total_iron = 0.0; total_vit_a = 0.0
         
         selected_ingredients = MasterIngredient.query.filter(MasterIngredient.id.in_(pilar_ids)).all()
-        menu_name_parts = [i.name for i in selected_ingredients]
+        menu_names = []
 
-        for i in selected_ingredients:
-            total_prot += i.protein; total_carb += i.carb; total_fat += i.fat
-            total_kcal += i.kcal; total_fiber += i.fiber; total_calcium += i.calcium
+        for ing in selected_ingredients:
+            # PENGAMAN: Gunakan 'or 0.0' jika kolom di DB bernilai NULL
+            berat_bersih = ing.weight or 0.0
+            ratio = berat_bersih / 100.0
+            
+            total_kcal += ((ing.kcal or 0.0) * ratio)
+            total_prot += ((ing.protein or 0.0) * ratio)
+            total_fat += ((ing.fat or 0.0) * ratio)
+            total_carb += ((ing.carb or 0.0) * ratio)
+            total_fiber += ((ing.fiber or 0.0) * ratio)
+            total_calcium += ((ing.calcium or 0.0) * ratio)
+            total_iron += ((ing.iron or 0.0) * ratio)
+            total_vit_a += ((ing.vit_a or 0.0) * ratio)
+            
+            menu_names.append(ing.name)
 
-        # 4. Simpan ke Database
+        # PROSES FOTO QC
+        file_foto = request.files.get('photo')
+        filename = "default_menu.jpg"
+        if file_foto and file_foto.filename != '':
+            filename = secure_filename(f"{current_user.id}_{tgl_input}_{file_foto.filename}")
+            # PERBAIKAN: Gunakan current_app.config bukan blueprint.config
+            upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'menus')
+            
+            if not os.path.exists(upload_path):
+                os.makedirs(upload_path)
+                
+            file_foto.save(os.path.join(upload_path, filename))
+
         new_menu = Menus(
             user_id=current_user.id,
-            menu_name=" & ".join(menu_name_parts[:3]) + "...", 
+            menu_name=", ".join(menu_names[:4]) + "...",
             photo=filename,
-            total_protein=total_prot,
-            total_carb=total_carb,
-            total_fat=total_fat,
-            total_kcal=total_kcal,
-            total_fiber=total_fiber,
-            total_calcium=total_calcium,
-            created_at=datetime.combine(target_date, datetime.now().time()) # Set waktu sesuai tgl distribusi
+            distribution_date=target_date,
+            total_kcal=round(total_kcal, 1),
+            total_protein=round(total_prot, 1),
+            total_fat=round(total_fat, 1),
+            total_carb=round(total_carb, 1),
+            total_fiber=round(total_fiber, 1),
+            total_calcium=round(total_calcium, 1),
+            total_iron=round(total_iron, 1),
+            total_vit_a=round(total_vit_a, 1)
         )
         db.session.add(new_menu)
         db.session.flush()
 
-        for pid in pilar_ids:
-            db.session.add(MenuIngredients(menu_id=new_menu.id, ingredient_id=pid, weight=100.0))
+        for ing in selected_ingredients:
+            db.session.add(MenuIngredients(
+                menu_id=new_menu.id, 
+                ingredient_id=ing.id, 
+                weight=ing.weight or 0.0
+            ))
 
         db.session.commit()
-        flash(f"Paket Menu untuk tanggal {tgl_input} Berhasil Dipublikasikan!", "success")
-        return redirect(url_for('home_blueprint.daftar_katalog'))
+        return jsonify({'status': 'success', 'message': 'Menu berhasil dipublikasikan!'})
 
     except Exception as e:
         db.session.rollback()
-        flash(f"Gagal menyusun menu: {str(e)}", "danger")
-        return redirect(url_for('home_blueprint.daftar_katalog'))
-
-# =========================================================
-#  WEB SERVICES (API UNTUK MOBILE)
-# =========================================================
-
-@blueprint.route('/api/v1/menu-hari-ini', methods=['GET'])
-def api_get_today_menu():
-    """Endpoint JSON untuk aplikasi mobile Android/iOS."""
-    try:
-        hari_ini = date.today()
-        # Cari menu yang terdaftar untuk hari ini
-        menu = Menus.query.filter(db.func.date(Menus.created_at) == hari_ini).first()
-
-        if not menu:
-            return jsonify({
-                "status": "empty", 
-                "message": "Belum ada menu yang disusun untuk hari ini."
-            }), 404
-
-        return jsonify({
-            "status": "success",
-            "data": {
-                "id": menu.id,
-                "nama_paket": menu.menu_name,
-                "foto_url": f"{request.host_url}static/assets/img/menus/{menu.photo}" if menu.photo else None,
-                "nutrisi": {
-                    "kalori": round(menu.total_kcal, 2),
-                    "protein": round(menu.total_protein, 2),
-                    "karbohidrat": round(menu.total_carb, 2),
-                    "lemak": round(menu.total_fat, 2),
-                    "serat": round(menu.total_fiber, 2)
-                },
-                "tanggal": menu.created_at.strftime('%Y-%m-%d')
-            }
-        }), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        # Cetak error ke terminal Flask untuk debug lebih lanjut
+        print(f"ERROR PUBLIKASI: {str(e)}") 
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # =========================================================
 #  OPERASIONAL & ULASAN
 # =========================================================
+
+
+@blueprint.route('/monitoring-kedatangan')
+@login_required
+@admin_required
+def monitoring_kedatangan_view():
+    # 1. Ambil parameter tanggal dari URL
+    date_str = request.args.get('date')
+    
+    # 2. Inisialisasi Query Dasar
+    query = LogDistribusi.query.filter_by(dapur_id=current_user.id)
+    
+    if date_str:
+        try:
+            # Konversi string '2026-01-17' menjadi objek Date Python
+            target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            # PERBAIKAN VITAL: Gunakan db.func.date untuk membuang bagian Jam:Menit di database
+            query = query.filter(db.func.date(LogDistribusi.waktu_sampai) == target_date)
+        except ValueError:
+            # Jika format tanggal salah, kembali ke hari ini
+            query = query.filter(db.func.date(LogDistribusi.waktu_sampai) == date.today())
+    else:
+        # Default jika tidak ada tanggal yang dipilih: Tampilkan hari ini
+        query = query.filter(db.func.date(LogDistribusi.waktu_sampai) == date.today())
+        
+    kedatangan_logs = query.order_by(LogDistribusi.waktu_sampai.desc()).all()
+    
+    return render_template('home/monitoring_kedatangan.html', 
+                           kedatangan=kedatangan_logs, 
+                           segment='monitoring_kedatangan')
+
+@blueprint.route('/dapur/arrival-monitoring', methods=['GET'])
+@login_required
+@admin_required
+def monitor_arrivals():
+    # Menggunakan relasi distribusi_logs yang baru saja ditambahkan di class Users
+    logs = current_user.distribusi_logs.order_by(LogDistribusi.waktu_sampai.desc()).all()
+    
+    return jsonify({
+        "status": "success",
+        "data": [{
+            "sekolah": log.sekolah.school_name, # Mengambil dari relasi sekolah
+            "waktu_sampai": log.waktu_sampai.strftime('%H:%M'),
+            "foto_bukti": log.foto_bukti,
+            "porsi": log.porsi_sampai,
+            "operator": log.sekolah.fullname, # Nama operator yang mengonfirmasi
+            "status": log.status
+        } for log in logs]
+    })
 
 @blueprint.route('/ulasan')
 @login_required
@@ -401,24 +517,37 @@ def ulasan_penerima():
 
 @blueprint.route('/api/ulasan-stats')
 @login_required
-@admin_required
 def api_ulasan_stats():
-    # Pastikan model yang digunakan adalah UlasanPenerima
-    reviews = UlasanPenerima.query.filter_by(user_id=current_user.id).all()
+    # Proteksi Peran
+    if current_user.role != 'admin_dapur':
+        return jsonify({"status": "error", "message": "Akses Ditolak"}), 403
+
+    # Ambil parameter tanggal dari URL (default hari ini)
+    target_date = request.args.get('tanggal', datetime.now().strftime('%Y-%m-%d'))
+    
+    # Query ulasan (Bisa ditambahkan filter sekolah jika katering memegang banyak sekolah)
+    reviews = UlasanPenerima.query.filter(
+        db.func.date(UlasanPenerima.tanggal) == target_date
+    ).all()
+
     processed_data = []
     pos, neg, net = 0, 0, 0
 
     for r in reviews:
-        sentiment = get_sentiment_prediction(r.ulasan_teks)
-        if sentiment == 'Positif': pos += 1
-        elif sentiment == 'Negatif': neg += 1
+        # Ambil status_ai yang sudah tersimpan (lebih efisien)
+        sentiment = (r.status_ai or 'netral').lower()
+        
+        if sentiment == 'positif': pos += 1
+        elif sentiment == 'negatif': neg += 1
         else: net += 1
         
         processed_data.append({
-            'penerima': r.nama_pengulas,  # PERBAIKAN: Gunakan nama_pengulas sesuai DB
+            'penerima': r.nama_pengulas,
+            'rating': r.rating,
+            'tags': r.tags.split(',') if r.tags else [], # Split string ke list untuk JS
             'text': r.ulasan_teks,
-            'status': sentiment.lower(),
-            'tanggal': r.tanggal.strftime('%Y-%m-%d')
+            'status': sentiment,
+            'tanggal': r.tanggal.strftime('%Y-%m-%d %H:%M')
         })
 
     total = len(processed_data)
@@ -431,24 +560,6 @@ def api_ulasan_stats():
         'chart_data': [pos, net, neg],
         'reviews': processed_data
     })
-
-@blueprint.route('/api/submit-ulasan', methods=['POST'])
-def api_receive_review():
-    try:
-        data = request.get_json(force=True)
-        # Menggunakan UlasanPenerima, bukan Penerima
-        new_review = UlasanPenerima(
-            user_id=data.get('user_id'),
-            nama_pengulas=data.get('nama'), # Mengambil field 'nama' dari Postman
-            ulasan_teks=data.get('review'), # Mengambil field 'review' dari Postman
-            tanggal=datetime.now()
-        )
-        db.session.add(new_review)
-        db.session.commit()
-        return jsonify({"status": "success", "message": "Ulasan berhasil disimpan"}), 201
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 400
 
 @blueprint.route('/monitoring')
 @login_required

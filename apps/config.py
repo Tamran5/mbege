@@ -40,7 +40,7 @@ class Config(object):
     MAIL_DEFAULT_SENDER = config('MAIL_DEFAULT_SENDER')
 
     # --- Konfigurasi Upload File ---
-    UPLOAD_FOLDER = os.path.join(basedir, 'apps', 'static', 'uploads')
+    UPLOAD_FOLDER = os.path.join(basedir, 'static', 'uploads')
     
     # Batasi Ukuran File Upload (Maksimal 2 MB)
     MAX_CONTENT_LENGTH = 2 * 1024 * 1024

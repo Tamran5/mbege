@@ -4,6 +4,41 @@ from apps.authentication.util import hash_pass, verify_pass
 from datetime import datetime
 
 # --- MODEL USER UTAMA (Terintegrasi Data Wilayah & Kemitraan) ---
+
+
+class Artikel(db.Model):
+    __tablename__ = 'artikel'
+
+    id = db.Column(db.Integer, primary_key=True)
+    judul = db.Column(db.String(255), nullable=False)
+    konten = db.Column(db.Text, nullable=False)
+    foto = db.Column(db.String(255))
+    
+    # Menentukan audiens: 'siswa', 'lansia', atau 'semua'
+    target_role = db.Column(db.String(20), default='semua') 
+    
+    # Relasi ke Admin Dapur pengirim
+    dapur_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+
+    penulis = db.relationship('Users', backref=db.backref('my_articles', lazy='dynamic'))
+
+class LogDistribusi(db.Model):
+    __tablename__ = 'log_distribusi'
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # Relasi ke Dapur dan Sekolah
+    dapur_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    sekolah_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    
+    # Data Kedatangan
+    foto_bukti = db.Column(db.String(255)) # Nama file dari Flutter
+    waktu_sampai = db.Column(db.DateTime, default=datetime.now)
+    porsi_sampai = db.Column(db.Integer)
+    status = db.Column(db.String(20), default='Diterima')
+
+    # Relasi balik untuk memudahkan query
+    sekolah = db.relationship('Users', foreign_keys=[sekolah_id])
 class Users(db.Model, UserMixin):
     __tablename__ = 'users'
 
@@ -16,6 +51,8 @@ class Users(db.Model, UserMixin):
     role = db.Column(db.String(20), default='admin_dapur')
     is_approved = db.Column(db.Boolean, default=False) 
 
+    school_token = db.Column(db.String(10), unique=True, nullable=True)
+    user_class = db.Column(db.String(20), nullable=True)
     # --- DATA IDENTITAS & PROFIL ---
     fullname = db.Column(db.String(100))
     phone = db.Column(db.String(20)) # Mapping dari _phoneController di Flutter
@@ -44,6 +81,10 @@ class Users(db.Model, UserMixin):
     pendaftar_dapur = db.relationship('Users', 
                                       foreign_keys=[dapur_id],
                                       backref=db.backref('mitra_dapur', remote_side=[id]))
+    # Tambahkan ini di bawah relasi pendaftar_dapur
+    pendaftar_sekolah = db.relationship('Users', 
+                                    foreign_keys=[sekolah_id],
+                                    backref=db.backref('daftar_siswa', remote_side=[id]))
 
     # --- FILE UPLOADS (Path ke static/uploads) ---
     file_ktp = db.Column(db.String(255))         
@@ -62,6 +103,10 @@ class Users(db.Model, UserMixin):
     my_beneficiaries = db.relationship('Penerima', backref='owner', lazy='dynamic')
     my_activities = db.relationship('AktivitasDapur', backref='admin_dapur', lazy='dynamic')
     reviews = db.relationship('UlasanPenerima', backref='student', lazy='dynamic')
+    distribusi_logs = db.relationship('LogDistribusi', 
+                                      foreign_keys=[LogDistribusi.dapur_id], 
+                                      backref='dapur_pengirim', 
+                                      lazy='dynamic')
 
     temp_otp = db.Column(db.String(6), nullable=True)
     otp_created_at = db.Column(db.DateTime, nullable=True)
@@ -112,23 +157,27 @@ class AktivitasDapur(db.Model):
             'selesai': self.waktu_selesai.strftime('%H:%M') if self.waktu_selesai else '-'
         }
 
-
-# --- MASTER BAHAN BAKU (UPDATE STANDAR GIZI 2025) ---
+# --- DATABASE KOMPOSISI PANGAN ---
 class MasterIngredient(db.Model):
     __tablename__ = 'master_ingredients'
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id')) 
     name = db.Column(db.String(100), nullable=False)
+    
+    # Kategori: Sumber Karbohidrat, Protein Hewani, Protein Nabati, Sayuran, Buah, Susu, Lemak
     category = db.Column(db.String(50)) 
     
-    # Gizi Makro
+    # Berat Porsi Standar (gr) - Berat bersih yang biasa disajikan
+    weight = db.Column(db.Float, default=0.0) 
+    
+    # Kandungan Gizi Makro (Per 100gr BDD)
     kcal = db.Column(db.Float, default=0.0)    # Energi (kkal)
-    carb = db.Column(db.Float, default=0.0)    # Karbohidrat (g)
     protein = db.Column(db.Float, default=0.0) # Protein (g)
     fat = db.Column(db.Float, default=0.0)     # Lemak (g)
+    carb = db.Column(db.Float, default=0.0)    # Karbohidrat (g)
     
-    # Gizi Mikro (Integrasi Gambar 6)
+    # Kandungan Gizi Mikro (Wajib Standar MBG 2024)
     fiber = db.Column(db.Float, default=0.0)   # Serat (g)
     calcium = db.Column(db.Float, default=0.0) # Kalsium (mg)
     iron = db.Column(db.Float, default=0.0)    # Zat Besi (mg)
@@ -137,27 +186,37 @@ class MasterIngredient(db.Model):
     folate = db.Column(db.Float, default=0.0)  # Folat (mcg)
     vit_b12 = db.Column(db.Float, default=0.0) # Vitamin B12 (mcg)
 
-# --- KATALOG MENU ---
+# --- KATALOG MENU HARIAN (DITAMPILKAN KE USER) ---
 class Menus(db.Model):
     __tablename__ = 'menus'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    menu_name = db.Column(db.String(255), nullable=False)
-    photo = db.Column(db.String(255)) 
     
+    menu_name = db.Column(db.String(255), nullable=False)
+    photo = db.Column(db.String(255)) # Foto QC Sajian
+    
+    # Jadwal Distribusi
+    distribution_date = db.Column(db.Date, nullable=False, default=datetime.utcnow().date)
+    
+    # Akumulasi Gizi Total Per Porsi (Hasil kalkulasi komponen)
     total_kcal = db.Column(db.Float, default=0.0)
-    total_carb = db.Column(db.Float, default=0.0)
     total_protein = db.Column(db.Float, default=0.0)
     total_fat = db.Column(db.Float, default=0.0)
-    # Tambahkan rekap gizi mikro utama
+    total_carb = db.Column(db.Float, default=0.0)
+    
+    # Akumulasi Mikro Nutrisi untuk Tampilan Aplikasi Mobile
     total_fiber = db.Column(db.Float, default=0.0)
+    total_iron = db.Column(db.Float, default=0.0)
     total_calcium = db.Column(db.Float, default=0.0)
+    total_vit_a = db.Column(db.Float, default=0.0)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relasi ke komponen piring
     components = db.relationship('MenuIngredients', backref='menu', cascade="all, delete-orphan")
 
 
-# --- KOMPOSISI RESEP (RELEVANSI KE BAHAN BAKU) ---
+# --- DETAIL KOMPONEN ISI PIRINGKU ---
 class MenuIngredients(db.Model):
     __tablename__ = 'menu_ingredients'
 
@@ -165,8 +224,10 @@ class MenuIngredients(db.Model):
     menu_id = db.Column(db.Integer, db.ForeignKey('menus.id'), nullable=False)
     ingredient_id = db.Column(db.Integer, db.ForeignKey('master_ingredients.id'), nullable=False)
     
-    weight = db.Column(db.Float, nullable=False)
+    # Berat bersih komponen yang digunakan dlm porsi ini (gr)
+    weight = db.Column(db.Float, nullable=False) 
     
+    # Link ke info nutrisi dasar
     ingredient_info = db.relationship('MasterIngredient')
 
 
@@ -185,20 +246,29 @@ class Penerima(db.Model):
     def to_dict(self):
         return {'id': self.id, 'category': self.kategori, 'name': self.nama_lokasi, 'location': self.alamat, 'count': self.kuota, 'pic': self.pic_nama, 'phone': self.pic_telepon}
 
-# --- MODEL ULASAN/FEEDBACK (BARU) ---
 class UlasanPenerima(db.Model):
     __tablename__ = 'ulasan_penerima'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    nama_pengulas = db.Column(db.String(100)) # Menyimpan data 'nama' dari JSON
-    ulasan_teks = db.Column(db.Text, nullable=False)
+    
+    # --- KOLOM BARU YANG HARUS DITAMBAHKAN ---
+    rating = db.Column(db.Integer, nullable=False, default=0) 
+    tags = db.Column(db.String(255)) # Disimpan sebagai string "Tag1,Tag2"
+    status_ai = db.Column(db.String(20), default='netral') 
+    # ----------------------------------------
+
+    nama_pengulas = db.Column(db.String(100))
+    ulasan_teks = db.Column(db.Text, nullable=True) # Dibuat nullable agar siswa bisa isi tag saja
     tanggal = db.Column(db.DateTime, default=datetime.now)
 
     def to_dict(self):
         return {
             'id': self.id,
-            'nama': self.nama_pengulas,
-            'ulasan': self.ulasan_teks,
+            'penerima': self.nama_pengulas, 
+            'rating': self.rating,
+            'tags': self.tags.split(',') if self.tags else [], 
+            'text': self.ulasan_teks,
+            'status': self.status_ai,
             'tanggal': self.tanggal.strftime('%Y-%m-%d %H:%M')
         }
 class Staff(db.Model):

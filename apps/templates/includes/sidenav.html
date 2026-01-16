@@ -74,7 +74,7 @@
               <li class="nav-item">
                 <a class="nav-link {% if 'data_penerima' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.data_penerima') }}">
                   <i class="fas fa-shipping-fast"></i>
-                  <span class="nav-link-text">Data  Penerima</span>
+                  <span class="nav-link-text">Data Penerima</span>
                 </a>
               </li>
             </ul>
@@ -106,9 +106,21 @@
                 </a>
               </li>
               <li class="nav-item">
+                <a class="nav-link {% if 'monitoring_kedatangan' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.monitoring_kedatangan_view') }}">
+                  <i class="fas fa-truck-loading"></i>
+                  <span class="nav-link-text">Monitoring Kedatangan</span>
+                </a>
+              </li>
+              <li class="nav-item">
                 <a class="nav-link {% if 'ulasan' in segment %} active {% endif %}" href="/ulasan">
                   <i class="fas fa-star"></i>
                   <span class="nav-link-text">Ulasan Siswa (AI)</span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link {% if 'manajemen_artikel' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.daftar_artikel') }}">
+                  <i class="fas fa-newspaper"></i>
+                  <span class="nav-link-text">Manajemen Artikel</span>
                 </a>
               </li>
               <li class="nav-item">

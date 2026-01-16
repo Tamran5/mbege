@@ -28,6 +28,6 @@ def get_sentiment_prediction(text):
         probs = torch.nn.functional.softmax(outputs.logits, dim=-1)
         prediction = torch.argmax(probs, dim=-1).item()
     
-    # Mapping label sesuai training di Colab Anda (0:Negatif, 1:Netral, 2:Positif)
+    # Mapping label sesuai training di Colab (0:Negatif, 1:Netral, 2:Positif)
     mapping = {0: 'Negatif', 1: 'Netral', 2: 'Positif'}
     return mapping.get(prediction, "Netral")

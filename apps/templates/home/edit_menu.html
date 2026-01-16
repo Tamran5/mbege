@@ -1,156 +1,199 @@
 {% extends 'layouts/base.html' %}
 
-{% block title %} Edit Menu - {{ menu.menu_name }} {% endblock title %}
+{% block title %} Edit Komposisi Menu - Standar MBG 2025 {% endblock title %}
 
 {% block content %}
 <div class="header bg-primary pb-6">
-  <div class="container-fluid">
-    <div class="header-body">
-      <div class="row align-items-center py-4">
-        <div class="col-lg-7">
-          <h6 class="h2 text-white d-inline-block mb-0">Manajemen Katalog</h6>
-          <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
-            <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
-              <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
-              <li class="breadcrumb-item"><a href="{{ url_for('home_blueprint.daftar_katalog') }}">Katalog Menu</a></li>
-              <li class="breadcrumb-item active">Edit Komposisi SOP 2025</li>
-            </ol>
-          </nav>
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-7">
+                    <h6 class="h2 text-white d-inline-block mb-0">Perencanaan Menu MBG</h6>
+                    <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+                        <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+                            <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
+                            <li class="breadcrumb-item"><a href="{{ url_for('home_blueprint.daftar_katalog') }}">Katalog Menu</a></li>
+                            <li class="breadcrumb-item active">Edit Komposisi</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
 </div>
 
 <div class="container-fluid mt--6">
-  <div class="row">
-    
-    <div class="col-xl-4">
-      <div class="card shadow border-0">
-        <div class="card-header bg-transparent">
-          <h3 class="mb-0 text-uppercase">Informasi Utama</h3>
-        </div>
-        <div class="card-body pt-0">
-          <form id="form-edit-menu">
-            <input type="hidden" id="menu-id" value="{{ menu.id }}">
+    <div class="row">
+        <div class="col-xl-4">
+            <div class="card shadow border-0">
+                <div class="card-header bg-transparent">
+                    <h3 class="mb-0 text-uppercase"><i class="fas fa-chart-pie mr-2"></i>Analisis Menu</h3>
+                </div>
+                <div class="card-body pt-0">
+                    <form id="form-edit-menu">
+                        <input type="hidden" id="menu-id" value="{{ menu.id }}">
 
-            <div class="form-group mb-4">
-              <label class="form-control-label text-sm">Nama Menu / Masakan</label>
-              <input type="text" id="input-menu-name" class="form-control" value="{{ menu.menu_name }}" required>
+                        <div class="form-group mb-4">
+                            <label class="form-control-label text-sm">Nama Paket Menu</label>
+                            <input type="text" id="input-menu-name" class="form-control" value="{{ menu.menu_name }}" required>
+                        </div>
+
+                        <div class="p-3 rounded mb-4" style="background-color: #f6f9fc; border: 1px solid #e9ecef;">
+                            <h6 class="text-uppercase text-muted ls-1 mb-3" style="font-size: 0.7rem;">Target Kontribusi Energi</h6>
+                            
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between text-xs mb-1">
+                                    <span>Energi Total:</span>
+                                    <span id="summary-kcal" class="font-weight-bold text-primary">0 kkal</span>
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between text-xs mb-1">
+                                    <span>Protein (Target 10-15%):</span>
+                                    <span id="pct-prot" class="font-weight-bold">0%</span>
+                                </div>
+                                <div class="progress progress-xs mb-0">
+                                    <div id="bar-prot" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between text-xs mb-1">
+                                    <span>Lemak (Target 20-30%):</span>
+                                    <span id="pct-fat" class="font-weight-bold">0%</span>
+                                </div>
+                                <div class="progress progress-xs mb-0">
+                                    <div id="bar-fat" class="progress-bar bg-info" role="progressbar" style="width: 0%"></div>
+                                </div>
+                            </div>
+
+                            <div class="mb-0">
+                                <div class="d-flex justify-content-between text-xs mb-1">
+                                    <span>Karbohidrat (Target 55-65%):</span>
+                                    <span id="pct-carb" class="font-weight-bold">0%</span>
+                                </div>
+                                <div class="progress progress-xs mb-0">
+                                    <div id="bar-carb" class="progress-bar bg-warning" role="progressbar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group mb-0">
+                            <label class="form-control-label text-sm">Foto Referensi Penyajian</label>
+                            <div class="custom-file mb-3">
+                                <input type="file" class="custom-file-input" id="input-photo" accept="image/*">
+                                <label class="custom-file-label" for="input-photo">Unggah Foto QC</label>
+                            </div>
+                            <div class="text-center bg-secondary rounded p-2 border">
+                                {% if menu.photo %}
+                                    <img id="preview-image" src="{{ url_for('static', filename='assets/img/menus/' + menu.photo) }}" class="img-fluid rounded shadow-sm" style="max-height: 150px;">
+                                {% else %}
+                                    <img id="preview-image" src="" class="img-fluid rounded shadow-sm" style="max-height: 150px; display: none;">
+                                    <div id="no-photo-text" class="py-4 text-muted text-xs">Belum ada foto referensi</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </form>
+                </div>
             </div>
-            
-            <div class="form-group mb-4">
-              <label class="form-control-label text-sm">Foto Hasil Masakan (QC)</label>
-              <div class="custom-file mb-3">
-                <input type="file" class="custom-file-input" id="input-photo" accept="image/*">
-                <label class="custom-file-label" for="input-photo">Ganti Foto Menu</label>
-              </div>
-              
-              <div class="text-center bg-secondary rounded p-3 border shadow-inner">
-                 {% if menu.photo %}
-                    <img id="preview-image" src="{{ url_for('static', filename='assets/img/menus/' + menu.photo) }}" 
-                         class="img-fluid rounded shadow-sm" style="max-height: 200px;" alt="Preview">
-                 {% else %}
-                    <img id="preview-image" src="" class="img-fluid rounded shadow-sm" style="max-height: 200px; display: none;">
-                    <div id="no-photo-text" class="py-4 text-muted"><i class="fas fa-image fa-2x d-block mb-2"></i>Belum ada foto</div>
-                 {% endif %}
-              </div>
+        </div>
+
+        <div class="col-xl-8">
+            <div class="card shadow border-0">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center py-3">
+                    <h3 class="mb-0 text-uppercase">Rincian Komponen Piring</h3>
+                    <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#modal-search-ingredient">
+                        <i class="fas fa-plus mr-1"></i> Tambah Komponen
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table align-items-center table-flush" id="table-ingredients">
+                        <thead class="thead-light">
+                            <tr class="text-uppercase" style="font-size: 0.6rem;">
+                                <th scope="col">Komponen</th>
+                                <th scope="col" class="text-center">Berat (g)</th>
+                                <th scope="col" class="text-center text-primary">Energi</th>
+                                <th scope="col" class="text-center text-success">Prot (g)</th>
+                                <th scope="col" class="text-center text-info">Lemak (g)</th>
+                                <th scope="col" class="text-center">Fe (mg)</th>
+                                <th scope="col" class="text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ingredient-list-body">
+                            {% for component in menu.components %}
+                            <tr data-id="{{ component.ingredient_id }}" 
+                                data-base-kcal="{{ component.ingredient_info.kcal }}"
+                                data-base-prot="{{ component.ingredient_info.protein }}"
+                                data-base-fat="{{ component.ingredient_info.fat }}"
+                                data-base-carb="{{ component.ingredient_info.carb }}"
+                                data-base-iron="{{ component.ingredient_info.iron|default(0) }}"
+                                data-base-calcium="{{ component.ingredient_info.calcium|default(0) }}"
+                                data-base-fiber="{{ component.ingredient_info.fiber|default(0) }}"
+                                data-base-vita="{{ component.ingredient_info.vit_a|default(0) }}">
+                                
+                                <th scope="row" class="text-sm">
+                                    <span class="font-weight-600 d-block">{{ component.ingredient_info.name }}</span>
+                                    <small class="text-muted">{{ component.ingredient_info.category }}</small>
+                                </th>
+                                <td class="text-center" style="width: 100px;">
+                                    <input type="number" class="form-control form-control-sm text-center input-weight" 
+                                           value="{{ component.weight|int }}" onchange="recalculateRow(this)" onkeyup="recalculateRow(this)">
+                                </td>
+                                <td class="text-center font-weight-bold val-kcal">{{ "%.1f"|format(component.weight * component.ingredient_info.kcal / 100) }}</td>
+                                <td class="text-center font-weight-bold val-prot text-success">{{ "%.1f"|format(component.weight * component.ingredient_info.protein / 100) }}</td>
+                                <td class="text-center val-fat text-info">{{ "%.1f"|format(component.weight * component.ingredient_info.fat / 100) }}</td>
+                                <td class="text-center val-iron">{{ "%.1f"|format(component.weight * (component.ingredient_info.iron|default(0)) / 100) }}</td>
+                                <input type="hidden" class="val-carb" value="{{ (component.weight * component.ingredient_info.carb / 100) }}">
+                                <input type="hidden" class="val-fiber" value="{{ (component.weight * (component.ingredient_info.fiber|default(0)) / 100) }}">
+                                <input type="hidden" class="val-calcium" value="{{ (component.weight * (component.ingredient_info.calcium|default(0)) / 100) }}">
+                                <input type="hidden" class="val-vita" value="{{ (component.weight * (component.ingredient_info.vit_a|default(0)) / 100) }}">
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-link text-danger p-0" onclick="removeRow(this)"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="bg-secondary">
+                            <tr class="font-weight-bold text-dark" style="font-size: 0.75rem;">
+                                <td>TOTAL PER PORSI</td>
+                                <td class="text-center" id="total-weight">0 g</td>
+                                <td class="text-center text-primary" id="total-kcal">0 kkal</td>
+                                <td class="text-center text-success" id="total-prot">0 g</td>
+                                <td class="text-center text-info" id="total-fat">0 g</td>
+                                <td class="text-center" id="total-iron">0 mg</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="card-footer py-3 bg-white border-0 d-flex justify-content-between">
+                    <a href="{{ url_for('home_blueprint.daftar_katalog') }}" class="btn btn-neutral btn-sm px-4">Batal</a>
+                    <button class="btn btn-primary btn-sm px-4 shadow-lg" onclick="saveMenuChanges()">Simpan Komposisi 2025</button>
+                </div>
             </div>
-          </form>
         </div>
-      </div>
     </div>
-
-    <div class="col-xl-8">
-      <div class="card shadow border-0">
-        <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center py-3">
-          <h3 class="mb-0 text-uppercase">Rincian Komposisi Gizi</h3>
-          <button class="btn btn-sm btn-info shadow-none" data-toggle="modal" data-target="#modal-search-ingredient">
-            <i class="fas fa-search mr-1"></i> Cari Bahan Baku
-          </button>
-        </div>
-
-        <div class="table-responsive">
-          <table class="table align-items-center table-flush" id="table-ingredients">
-            <thead class="thead-light">
-              <tr class="text-uppercase" style="font-size: 0.65rem;">
-                <th scope="col" style="min-width: 180px;">Bahan</th>
-                <th scope="col" class="text-center">Berat (gr)</th>
-                <th scope="col" class="text-center text-success">Prot (g)</th>
-                <th scope="col" class="text-center text-warning">Karbo (g)</th>
-                <th scope="col" class="text-center">Serat (g)</th>
-                <th scope="col" class="text-center">Kalsium (mg)</th>
-                <th scope="col" class="text-center">Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="ingredient-list-body">
-              {% for component in menu.components %}
-              <tr data-id="{{ component.ingredient_id }}" 
-                  data-base-prot="{{ component.ingredient_info.protein }}"
-                  data-base-carb="{{ component.ingredient_info.carb }}"
-                  data-base-fat="{{ component.ingredient_info.fat }}"
-                  data-base-fiber="{{ component.ingredient_info.fiber|default(0) }}"
-                  data-base-calcium="{{ component.ingredient_info.calcium|default(0) }}">
-                  
-                <th scope="row" class="text-sm">
-                    <span class="font-weight-600 d-block">{{ component.ingredient_info.name }}</span>
-                    <small class="text-muted text-xs">{{ component.ingredient_info.category }}</small>
-                </th>
-                <td class="text-center" style="width: 100px;">
-                  <input type="number" class="form-control form-control-sm text-center input-weight" 
-                         value="{{ component.weight|int }}" onchange="recalculateRow(this)" onkeyup="recalculateRow(this)">
-                </td>
-                
-                <td class="text-center font-weight-bold val-prot text-success">{{ "%.1f"|format(component.weight * component.ingredient_info.protein / 100) }}</td>
-                <td class="text-center font-weight-bold val-carb text-warning">{{ "%.1f"|format(component.weight * component.ingredient_info.carb / 100) }}</td>
-                <td class="text-center val-fiber">{{ "%.1f"|format(component.weight * (component.ingredient_info.fiber|default(0)) / 100) }}</td>
-                <td class="text-center val-calcium">{{ "%.1f"|format(component.weight * (component.ingredient_info.calcium|default(0)) / 100) }}</td>
-                <td class="text-center">
-                  <button class="btn btn-sm btn-icon-only text-danger border-0 bg-transparent" onclick="removeRow(this)"><i class="fas fa-trash"></i></button>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-            
-            <tfoot class="bg-secondary">
-              <tr class="font-weight-bold text-dark" style="font-size: 0.8rem;">
-                <td class="py-3">TOTAL GIZI MBG</td>
-                <td class="text-center" id="total-weight">0 gr</td>
-                <td class="text-center text-success" id="total-prot">0 g</td>
-                <td class="text-center text-warning" id="total-carb">0 g</td>
-                <td class="text-center" id="total-fiber">0 g</td>
-                <td class="text-center" id="total-calcium">0 mg</td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        <div class="card-footer py-4 d-flex justify-content-between bg-white border-0">
-          <a href="{{ url_for('home_blueprint.daftar_katalog') }}" class="btn btn-neutral btn-sm px-4">Batal</a>
-          <button class="btn btn-primary btn-sm px-4 shadow-lg" onclick="saveMenuChanges()">Simpan Perubahan Menu</button>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 
 <div class="modal fade" id="modal-search-ingredient" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header border-0">
-                <h5 class="modal-title font-weight-bold text-uppercase">Tambah Bahan Baku</h5>
+                <h5 class="modal-title font-weight-bold">TAMBAH KOMPONEN PANGAN</h5>
                 <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <div class="modal-body bg-secondary pt-0">
                 <div class="form-group mb-3">
                     <div class="input-group input-group-alternative">
                         <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-search"></i></span></div>
-                        <input class="form-control text-sm" placeholder="Ketik nama bahan..." type="text" id="search-input" onkeyup="searchIngredients()">
+                        <input class="form-control text-sm" placeholder="Ketik nama komponen (misal: Ayam, Ikan...)" type="text" id="search-input" onkeyup="searchIngredients()">
                     </div>
                 </div>
                 <div class="list-group shadow-sm" id="search-results" style="max-height: 250px; overflow-y: auto;">
-                    <div class="text-center text-muted py-3 text-sm bg-white">Cari bahan untuk melihat kandungan gizi...</div>
+                    <div class="text-center text-muted py-3 text-sm bg-white">Cari komponen pangan...</div>
                 </div>
             </div>
         </div>
@@ -165,145 +208,173 @@
         updateGrandTotal();
     });
 
-    // Preview Foto QC
-    document.getElementById('input-photo').addEventListener('change', function(e) {
-        if (e.target.files && e.target.files[0]) {
-            let reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('preview-image').src = e.target.result;
-                document.getElementById('preview-image').style.display = 'block';
-                const noPhotoText = document.getElementById('no-photo-text');
-                if(noPhotoText) noPhotoText.style.display = 'none';
-            }
-            reader.readAsDataURL(e.target.files[0]);
-        }
-    });
-
-    // Perhitungan Real-Time sesuai Gambar 6
     function recalculateRow(input) {
         const row = input.closest('tr');
         const weight = parseFloat(input.value) || 0;
         const ratio = weight / 100;
         
-        const baseProt = parseFloat(row.dataset.baseProt) || 0;
-        const baseCarb = parseFloat(row.dataset.baseCarb) || 0;
-        const baseFiber = parseFloat(row.dataset.baseFiber) || 0;
-        const baseCal  = parseFloat(row.dataset.baseCalcium) || 0;
-
-        row.querySelector('.val-prot').innerText = (ratio * baseProt).toFixed(1);
-        row.querySelector('.val-carb').innerText = (ratio * baseCarb).toFixed(1);
-        row.querySelector('.val-fiber').innerText = (ratio * baseFiber).toFixed(1);
-        row.querySelector('.val-calcium').innerText = (ratio * baseCal).toFixed(1);
+        row.querySelector('.val-kcal').innerText = (ratio * parseFloat(row.dataset.baseKcal)).toFixed(1);
+        row.querySelector('.val-prot').innerText = (ratio * parseFloat(row.dataset.baseProt)).toFixed(1);
+        row.querySelector('.val-fat').innerText = (ratio * parseFloat(row.dataset.baseFat)).toFixed(1);
+        row.querySelector('.val-iron').innerText = (ratio * parseFloat(row.dataset.baseIron)).toFixed(1);
+        row.querySelector('.val-carb').value = (ratio * parseFloat(row.dataset.baseCarb)).toFixed(1);
+        row.querySelector('.val-fiber').value = (ratio * parseFloat(row.dataset.baseFiber)).toFixed(1);
+        row.querySelector('.val-calcium').value = (ratio * parseFloat(row.dataset.baseCalcium)).toFixed(1);
+        row.querySelector('.val-vita').value = (ratio * parseFloat(row.dataset.baseVita)).toFixed(1);
 
         updateGrandTotal();
     }
 
     function updateGrandTotal() {
-        let tWeight = 0, tProt = 0, tCarb = 0, tFiber = 0, tCal = 0;
+        let tWeight = 0, tKcal = 0, tProt = 0, tFat = 0, tCarb = 0, tIron = 0, tCal = 0, tFiber = 0, tVita = 0;
 
         document.querySelectorAll("#table-ingredients tbody tr").forEach(row => {
             tWeight += parseFloat(row.querySelector('.input-weight').value) || 0;
+            tKcal += parseFloat(row.querySelector('.val-kcal').innerText) || 0;
             tProt += parseFloat(row.querySelector('.val-prot').innerText) || 0;
-            tCarb += parseFloat(row.querySelector('.val-carb').innerText) || 0;
-            tFiber += parseFloat(row.querySelector('.val-fiber').innerText) || 0;
-            tCal += parseFloat(row.querySelector('.val-calcium').innerText) || 0;
+            tFat += parseFloat(row.querySelector('.val-fat').innerText) || 0;
+            tCarb += parseFloat(row.querySelector('.val-carb').value) || 0;
+            tIron += parseFloat(row.querySelector('.val-iron').innerText) || 0;
+            tCal += parseFloat(row.querySelector('.val-calcium').value) || 0;
+            tFiber += parseFloat(row.querySelector('.val-fiber').value) || 0;
+            tVita += parseFloat(row.querySelector('.val-vita').value) || 0;
         });
 
-        document.getElementById('total-weight').innerText = tWeight + " gr";
+        document.getElementById('total-weight').innerText = tWeight.toFixed(0) + " g";
+        document.getElementById('total-kcal').innerText = tKcal.toFixed(0) + " kkal";
         document.getElementById('total-prot').innerText = tProt.toFixed(1) + " g";
-        document.getElementById('total-carb').innerText = tCarb.toFixed(1) + " g";
-        document.getElementById('total-fiber').innerText = tFiber.toFixed(1) + " g";
-        document.getElementById('total-calcium').innerText = tCal.toFixed(1) + " mg";
-    }
+        document.getElementById('total-fat').innerText = tFat.toFixed(1) + " g";
+        document.getElementById('total-iron').innerText = tIron.toFixed(1) + " mg";
+        
+        // Update Summary Dashboard
+        document.getElementById('summary-kcal').innerText = tKcal.toFixed(0) + " kkal";
+        
+        if (tKcal > 0) {
+            const pProt = ((tProt * 4) / tKcal * 100).toFixed(1);
+            const pFat = ((tFat * 9) / tKcal * 100).toFixed(1);
+            const pCarb = ((tCarb * 4) / tKcal * 100).toFixed(1);
 
-    function removeRow(btn) {
-        if(confirm("Hapus bahan baku dari komposisi?")) {
-            btn.closest('tr').remove();
-            updateGrandTotal();
+            document.getElementById('pct-prot').innerText = pProt + "%";
+            document.getElementById('bar-prot').style.width = pProt + "%";
+            
+            document.getElementById('pct-fat').innerText = pFat + "%";
+            document.getElementById('bar-fat').style.width = pFat + "%";
+            
+            document.getElementById('pct-carb').innerText = pCarb + "%";
+            document.getElementById('bar-carb').style.width = pCarb + "%";
         }
     }
 
-    // Integrasi dengan Master Bahan Baku (API Standar 2025)
-    let searchTimeout;
+    // Fungsi cari, pilih, dan simpan tetap serupa namun diperluas untuk semua field nutrisi mikro
     function searchIngredients() {
-        clearTimeout(searchTimeout);
         const query = document.getElementById('search-input').value;
         const resultsDiv = document.getElementById('search-results');
         if(query.length < 2) return;
 
-        searchTimeout = setTimeout(() => {
-            fetch(`/api/cari-bahan-master?q=${query}`)
-                .then(res => res.json())
-                .then(data => {
-                    resultsDiv.innerHTML = '';
-                    if(data.length === 0) {
-                        resultsDiv.innerHTML = '<div class="list-group-item text-center text-muted py-3">Bahan tidak ditemukan.</div>';
-                        return;
-                    }
-                    data.forEach(item => {
-                        const btn = document.createElement('button');
-                        btn.className = "list-group-item list-group-item-action d-flex justify-content-between align-items-center";
-                        btn.innerHTML = `<div><span class="font-weight-bold text-dark">${item.name}</span><br><small class="text-muted text-xs">${item.category}</small></div><i class="fas fa-plus-circle text-info"></i>`;
-                        btn.onclick = () => { selectIngredient(item); };
-                        resultsDiv.appendChild(btn);
-                    });
+        fetch(`/api/cari-bahan-master?q=${query}`)
+            .then(res => res.json())
+            .then(data => {
+                resultsDiv.innerHTML = '';
+                data.forEach(item => {
+                    const btn = document.createElement('button');
+                    btn.className = "list-group-item list-group-item-action text-sm";
+                    btn.innerHTML = `<b>${item.name}</b> <br> <small class="text-muted">${item.category}</small>`;
+                    btn.onclick = () => { selectIngredient(item); };
+                    resultsDiv.appendChild(btn);
                 });
-        }, 300);
+            });
     }
 
     function selectIngredient(item) {
         const tbody = document.getElementById('ingredient-list-body');
         const tr = document.createElement('tr');
         tr.dataset.id = item.id;
+        tr.dataset.baseKcal = item.kcal;
         tr.dataset.baseProt = item.prot;
-        tr.dataset.baseCarb = item.carb;
         tr.dataset.baseFat = item.fat;
-        tr.dataset.baseFiber = item.fiber || 0;
+        tr.dataset.baseCarb = item.carb;
+        tr.dataset.baseIron = item.iron || 0;
         tr.dataset.baseCalcium = item.calcium || 0;
+        tr.dataset.baseFiber = item.fiber || 0;
+        tr.dataset.baseVita = item.vit_a || 0;
 
         tr.innerHTML = `
             <th scope="row" class="text-sm"><span class="font-weight-600 d-block">${item.name}</span><small class="text-muted">${item.category}</small></th>
-            <td class="text-center"><input type="number" class="form-control form-control-sm text-center input-weight" value="100" onchange="recalculateRow(this)" onkeyup="recalculateRow(this)"></td>
+            <td class="text-center" style="width: 100px;"><input type="number" class="form-control form-control-sm text-center input-weight" value="100" onchange="recalculateRow(this)" onkeyup="recalculateRow(this)"></td>
+            <td class="text-center font-weight-bold val-kcal">${item.kcal}</td>
             <td class="text-center font-weight-bold val-prot text-success">${item.prot}</td>
-            <td class="text-center font-weight-bold val-carb text-warning">${item.carb}</td>
-            <td class="text-center val-fiber">${item.fiber || 0}</td>
-            <td class="text-center val-calcium">${item.calcium || 0}</td>
-            <td class="text-center"><button class="btn btn-sm btn-icon-only text-danger border-0 bg-transparent" onclick="removeRow(this)"><i class="fas fa-trash"></i></button></td>
+            <td class="text-center val-fat text-info">${item.fat}</td>
+            <td class="text-center val-iron">${item.iron || 0}</td>
+            <input type="hidden" class="val-carb" value="${item.carb}">
+            <input type="hidden" class="val-fiber" value="${item.fiber || 0}">
+            <input type="hidden" class="val-calcium" value="${item.calcium || 0}">
+            <input type="hidden" class="val-vita" value="${item.vit_a || 0}">
+            <td class="text-center"><button class="btn btn-sm btn-link text-danger p-0" onclick="removeRow(this)"><i class="fas fa-trash"></i></button></td>
         `;
         tbody.appendChild(tr);
         $('#modal-search-ingredient').modal('hide');
         updateGrandTotal();
     }
 
-    function saveMenuChanges() {
-        const menuId = document.getElementById('menu-id').value;
-        const menuName = document.getElementById('input-menu-name').value;
-        const photoFile = document.getElementById('input-photo').files[0];
-
-        let ingredients = [];
-        document.querySelectorAll("#table-ingredients tbody tr").forEach(row => {
-            ingredients.push({ id: row.dataset.id, weight: parseFloat(row.querySelector('.input-weight').value) });
-        });
-
-        if (ingredients.length === 0) { alert("Pilih minimal satu bahan baku!"); return; }
-
-        let formData = new FormData();
-        formData.append('id', menuId);
-        formData.append('menu_name', menuName);
-        if (photoFile) formData.append('photo', photoFile);
-        
-        formData.append('total_prot', document.getElementById('total-prot').innerText.split(' ')[0]);
-        formData.append('total_carb', document.getElementById('total-carb').innerText.split(' ')[0]);
-        formData.append('ingredients', JSON.stringify(ingredients));
-
-        fetch('/api/update-menu', { method: 'POST', body: formData })
-        .then(res => res.json())
-        .then(data => {
-            if(data.status === 'success') {
-                alert("Komposisi Menu SOP 2025 berhasil disimpan!");
-                window.location.href = "{{ url_for('home_blueprint.daftar_katalog') }}";
-            } else { alert("Gagal: " + data.message); }
-        });
+    function removeRow(btn) {
+        btn.closest('tr').remove();
+        updateGrandTotal();
     }
+
+    function saveMenuChanges() {
+        const formData = new FormData();
+        formData.append('id', document.getElementById('menu-id').value);
+        formData.append('menu_name', document.getElementById('input-menu-name').value);
+        
+        let components = [];
+        let tKcal = 0, tProt = 0, tFat = 0, tCarb = 0, tFiber = 0, tIron = 0, tCal = 0, tVita = 0;
+
+        document.querySelectorAll("#table-ingredients tbody tr").forEach(row => {
+            const w = parseFloat(row.querySelector('.input-weight').value);
+            components.push({ ingredient_id: row.dataset.id, weight: w });
+            
+            tKcal += parseFloat(row.querySelector('.val-kcal').innerText);
+            tProt += parseFloat(row.querySelector('.val-prot').innerText);
+            tFat += parseFloat(row.querySelector('.val-fat').innerText);
+            tCarb += parseFloat(row.querySelector('.val-carb').value);
+            tFiber += parseFloat(row.querySelector('.val-fiber').value);
+            tIron += parseFloat(row.querySelector('.val-iron').innerText);
+            tCal += parseFloat(row.querySelector('.val-calcium').value);
+            tVita += parseFloat(row.querySelector('.val-vita').value);
+        });
+
+        formData.append('components', JSON.stringify(components));
+        formData.append('total_kcal', tKcal);
+        formData.append('total_protein', tProt);
+        formData.append('total_fat', tFat);
+        formData.append('total_carb', tCarb);
+        formData.append('total_fiber', tFiber);
+        formData.append('total_iron', tIron);
+        formData.append('total_calcium', tCal);
+        formData.append('total_vit_a', tVita);
+
+        const photo = document.getElementById('input-photo').files[0];
+        if(photo) formData.append('photo', photo);
+
+        fetch('/api/update-menu-mbg', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') location.href = "{{ url_for('home_blueprint.daftar_katalog') }}";
+                else alert("Gagal: " + data.message);
+            });
+    }
+
+    // Logic preview foto
+    document.getElementById('input-photo').addEventListener('change', function(e) {
+        if (e.target.files && e.target.files[0]) {
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('preview-image').src = e.target.result;
+                document.getElementById('preview-image').style.display = 'block';
+                if(document.getElementById('no-photo-text')) document.getElementById('no-photo-text').style.display = 'none';
+            }
+            reader.readAsDataURL(e.target.files[0]);
+        }
+    });
 </script>
 {% endblock javascripts %}
