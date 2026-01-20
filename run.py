@@ -26,6 +26,15 @@ except KeyError:
 
 app = create_app(app_config)
 
+with app.app_context():
+    print("\n" + "="*40)
+    print("DAFTAR RUTE API YANG AKTIF:")
+    for rule in app.url_map.iter_rules():
+        # Hanya tampilkan rute yang mengandung /api
+        if '/api' in str(rule):
+            print(f"URL: {rule.rule} --> Endpoint: {rule.endpoint}")
+    print("="*40 + "\n")
+
 # --- INTEGRASI UNTUK FLUTTER WEB & MOBILE ---
 CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=False) 
 

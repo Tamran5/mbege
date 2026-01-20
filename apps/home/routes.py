@@ -571,6 +571,7 @@ def route_monitoring():
     
     total_target = sum(item.kuota for item in current_user.my_beneficiaries)
     return render_template('home/monitoring.html', segment='monitoring', target_porsi=total_target)
+    
 
 @blueprint.route('/api/submit-activity', methods=['POST'])
 @login_required

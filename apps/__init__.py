@@ -25,7 +25,7 @@ def register_extensions(app):
     CORS(app, resources={r"/api/*": {
         "origins": "*",
         "methods": ["POST", "GET", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
+        "allow_headers": ["Content-Type", "Authorization", "ngrok-skip-browser-warning"]
     }})
 
 def register_blueprints(app):

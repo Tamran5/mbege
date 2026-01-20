@@ -118,4 +118,5 @@ function renderTabel() {
             </tr>
         `;
     });
+    setInterval(updateDashboard, 10000);
 }

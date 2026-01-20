@@ -8,11 +8,13 @@ from flask import request, jsonify, current_app
 from flask_mail import Mail, Message
 from werkzeug.utils import secure_filename
 from flask_login import current_user
+from apps.authentication.util import hash_pass,  verify_pass
 
 from apps import db
 from apps.authentication.models import Users, LogDistribusi, Artikel,MasterIngredient, Menus, MenuIngredients,UlasanPenerima
 from . import api_bp
 from apps.api.utils import token_required
+from apps.home.utils import get_sentiment_prediction
 
 mail = Mail()
 
@@ -54,19 +56,29 @@ def generate_random_token():
     return f"REG-{digits}"
 
 
-# --- 1. RUTE REGISTRASI ---
+
+
+
 @api_bp.route('/register', methods=['POST'])
 def register():
+    # Menggunakan request.form karena ada pengiriman file (SK Operator)
     data = request.form 
     role = data.get('role')
-    phone = data.get('phone')
-    email = data.get('email') 
+    phone = data.get('phone', '').strip()
+    email = data.get('email', '').strip()
+    password = data.get('password')
     
+    # 1. Validasi Input Dasar
+    if not phone or not password or not role:
+        return jsonify({"status": "error", "message": "Data utama tidak lengkap"}), 400
+
+    # 2. Cek duplikasi User (Nomor HP atau Email)
     user_exists = Users.query.filter((Users.phone == phone) | (Users.email == email)).first()
     if user_exists:
         msg = "Nomor HP sudah terdaftar" if user_exists.phone == phone else "Email sudah terdaftar"
         return jsonify({"status": "error", "message": msg}), 400
 
+    # 3. Inisialisasi User Baru
     new_user = Users(
         fullname=data.get('fullname'),
         phone=phone, 
@@ -78,21 +90,29 @@ def register():
         village=data.get('village'),
         address=data.get('address'),
         dapur_id=data.get('dapur_id'), 
-        is_approved=False 
+        is_approved=False # Default menunggu verifikasi admin
     )
-    new_user.password = data.get('password')
 
-    # Logika Khusus Sekolah
+    # --- POIN KRUSIAL: Hashing Password ---
+    # Mengubah password 'otong' menjadi BLOB (bytes) berisi Salt + Hash
+    new_user.password = hash_pass(password)
+
+    # 4. Logika Khusus Berdasarkan Role
     if role == 'pengelola_sekolah':
         new_user.npsn = data.get('npsn')
         new_user.school_name = data.get('school_name')
         new_user.student_count = int(data.get('student_count', 0))
-        new_user.school_token = generate_random_token() # Simpan ke DB
         
+        # Generate token unik untuk dibagikan ke siswa
+        new_user.school_token = generate_random_token() 
+        
+        # Simpan file SK jika diunggah
         if 'file_sk_operator' in request.files:
-            new_user.file_sk_operator = save_document(request.files['file_sk_operator'], 'documents/sk')
+            new_user.file_sk_operator = save_document(
+                request.files['file_sk_operator'], 
+                'documents/sk'
+            )
 
-    # Logika Khusus Siswa
     elif role == 'siswa':
         sekolah_id = data.get('sekolah_id')
         token_input = data.get('registration_token')
@@ -100,18 +120,20 @@ def register():
         if not sekolah_id or not token_input:
             return jsonify({"status": "error", "message": "Pilih Sekolah dan masukkan Token"}), 400
 
+        # Cari sekolah tujuan
         school = Users.query.filter_by(id=sekolah_id, role='pengelola_sekolah').first()
         if not school:
             return jsonify({"status": "error", "message": "Sekolah tidak ditemukan"}), 404
 
-        # Validasi Token
+        # Validasi Token Registrasi Siswa
         if school.school_token != token_input:
             return jsonify({"status": "error", "message": "Token registrasi salah!"}), 401
 
         new_user.nisn = data.get('nisn')
         new_user.sekolah_id = sekolah_id
-        new_user.dapur_id = school.dapur_id 
+        new_user.dapur_id = school.dapur_id # Menyamakan dapur dengan sekolahnya
 
+    # 5. Eksekusi Simpan ke Database
     try:
         db.session.add(new_user)
         db.session.commit()
@@ -122,33 +144,44 @@ def register():
         }), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
-
+        return jsonify({"status": "error", "message": f"Database Error: {str(e)}"}), 500
+    
 
 # --- 2. RUTE LOGIN ---
 @api_bp.route('/login', methods=['POST'])
 def login():
+    # 1. Ambil data JSON dari Flutter
     data = request.get_json()
-    phone = data.get('phone')
+    if not data:
+        return jsonify({"status": "error", "message": "Format data tidak valid"}), 400
+
+    phone = data.get('phone', '').strip()
     password = data.get('password')
 
+    # 2. Cari User berdasarkan Nomor HP
     user = Users.query.filter_by(phone=phone).first()
 
+    # 3. Verifikasi Keberadaan User dan Validitas Password
+    # verify_password di model akan memanggil fungsi verify_pass kustom Anda
     if not user or not user.verify_password(password):
+        # Kembalikan 401 jika gagal agar Flutter bisa menangkap pesan error
         return jsonify({"status": "error", "message": "Nomor HP atau Password salah"}), 401
 
-    # Ambil Nama Sekolah Dinamis
+    # 4. Logika Nama Sekolah Dinamis
+    # Jika role adalah siswa, ambil nama sekolah dari pengelola terkait via sekolah_id
     display_school_name = user.school_name 
     if user.role == 'siswa' and user.sekolah_id:
         sekolah_terkait = Users.query.get(user.sekolah_id)
-        display_school_name = sekolah_terkait.school_name if sekolah_terkait else "Sekolah Tidak Ditemukan"
+        display_school_name = sekolah_terkait.school_name if sekolah_terkait else "Sekolah Belum Terdaftar"
 
+    # 5. Pembuatan JWT Token (Berlaku 24 Jam)
     token = jwt.encode({
         'user_id': user.id,
         'role': user.role,
         'exp': datetime.now(timezone.utc) + timedelta(hours=24)
     }, current_app.config['SECRET_KEY'], algorithm="HS256")
 
+    # 6. Kirim Respon Sukses ke Flutter
     return jsonify({
         "status": "success",
         "token": token,
@@ -162,7 +195,7 @@ def login():
             "registration_token": user.school_token,
             "nisn": user.nisn
         }
-    })
+    }), 200
 
 @api_bp.route('/update-profile', methods=['POST'])
 @token_required
