@@ -12,12 +12,41 @@ from apps.authentication.util import hash_pass,  verify_pass
 from sqlalchemy import or_
 
 from apps import db
-from apps.authentication.models import Users, LogDistribusi, Artikel,MasterIngredient, Menus, MenuIngredients,UlasanPenerima
+from apps.authentication.models import Users, LogDistribusi, Artikel,MasterIngredient, Menus, MenuIngredients,UlasanPenerima,AktivitasDapur,ChatHistory
 from . import api_bp
 from apps.api.utils import token_required
-from apps.home.utils import get_sentiment_prediction, proses_verifikasi_ktp
+from apps.home.utils import get_sentiment_prediction, proses_verifikasi_ktp, get_chatbot_response
 
 mail = Mail()
+
+
+def get_db_context(user_message):
+    context = ""
+    
+    # A. Cek jika tanya Menu
+    if "menu" in user_message.lower():
+        today_menu = Menus.query.filter_by(distribution_date=date.today()).first()
+        if today_menu:
+            context += f"Data Menu Hari Ini: {today_menu.menu_name}, Kalori: {today_menu.total_kcal} kcal. "
+        else:
+            context += "Data Menu: Belum ada menu yang diinput untuk hari ini. "
+
+    # B. Cek jika tanya Distribusi/Pengiriman
+    if "sampai" in user_message.lower() or "distribusi" in user_message.lower():
+        # Contoh mengambil log terakhir
+        last_delivery = LogDistribusi.query.order_by(LogDistribusi.waktu_sampai.desc()).first()
+        if last_delivery:
+            sekolah = Users.query.get(last_delivery.sekolah_id)
+            context += f"Status Distribusi: Makanan terakhir sampai di {sekolah.school_name} pada jam {last_delivery.waktu_sampai.strftime('%H:%M')}. "
+
+    # C. Cek jika tanya Progres Dapur
+    if "dapur" in user_message.lower() or "masak" in user_message.lower():
+        last_activity = AktivitasDapur.query.order_by(AktivitasDapur.waktu_mulai.desc()).first()
+        if last_activity:
+            dapur = Users.query.get(last_activity.user_id)
+            context += f"Aktivitas Dapur: {dapur.kitchen_name} sedang melakukan {last_activity.jenis_aktivitas} (Status: {last_activity.status}). "
+
+    return context
 
 # --- HELPER: OTP & EMAIL ---
 def send_otp_email(target_email):
@@ -841,3 +870,58 @@ def google_login():
             "school_name": display_school_name
         }
     }), 200
+
+
+@api_bp.route('/chatbot', methods=['POST'])
+@token_required
+def api_chatbot(current_user):
+    data = request.get_json()
+    user_message = data.get('message', '')
+
+    if not user_message:
+        return jsonify({"status": "error", "message": "Pesan kosong"}), 400
+
+    # 1. AMBIL RIWAYAT PESAN TERAKHIR (Memory)
+    # Mengambil 3 percakapan terakhir untuk memberikan konteks pada AI
+    past_chats = ChatHistory.query.filter_by(user_id=current_user.id)\
+                 .order_by(ChatHistory.timestamp.desc()).limit(3).all()
+    
+    chat_memory = ""
+    for chat in reversed(past_chats):
+        chat_memory += f"User: {chat.message}\nAssistant: {chat.reply}\n"
+
+    # 2. AMBIL DATA DARI DATABASE (RAG)
+    db_context = get_db_context(user_message)
+
+    # 3. SUSUN PROMPT DENGAN KONTEKS & MEMORI
+    prompt = f"""
+    System: Anda adalah asisten pintar MBG. 
+    Gunakan data riil ini jika relevan: {db_context}
+    
+    Riwayat Percakapan Sebelumnya:
+    {chat_memory}
+    
+    User: {user_message}
+    Assistant:"""
+
+    # 4. GENERATE JAWABAN
+    bot_reply = get_chatbot_response(prompt)
+
+    # 5. SIMPAN KE DATABASE (Riwayat Baru)
+    try:
+        new_chat = ChatHistory(
+            user_id=current_user.id,
+            message=user_message,
+            reply=bot_reply
+        )
+        db.session.add(new_chat)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"Gagal menyimpan riwayat: {e}")
+
+    return jsonify({
+        "status": "success",
+        "reply": bot_reply,
+        "timestamp": datetime.now().strftime('%H:%M')
+    })

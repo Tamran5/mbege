@@ -241,27 +241,19 @@ def profile():
 #  MANAJEMEN GIZI (MASTER BAHAN BAKU STANDAR 2025)
 # =========================================================
 
-@blueprint.route('/penyusunan-resep')
-@login_required
-@admin_required
-def penyusunan_resep():
-    if getattr(current_user, 'role', None) == 'admin_dapur' and not current_user.is_approved:
-        return render_template('home/pending_approval.html'), 200
-        
-    ingredients = MasterIngredient.query.filter_by(user_id=current_user.id).order_by(MasterIngredient.id.desc()).all()
-    return render_template('home/penyusunan_resep.html', segment='penyusunan_resep', ingredients=ingredients)
-
 @blueprint.route('/api/simpan-bahan-master', methods=['POST'])
 @login_required
 @admin_required
 def api_simpan_bahan():
     try:
         data = request.get_json()
-        # Menyimpan 11 Parameter Gizi sesuai Tabel 5.2 MBG 2025
+        
+        # Tambahkan 'weight' agar sinkron dengan JS
         new_item = MasterIngredient(
             user_id=current_user.id,
             name=data.get('name'),
             category=data.get('category'),
+            weight=float(data.get('weight', 0)), # FIX: Tambahkan ini
             kcal=float(data.get('kcal', 0)),
             carb=float(data.get('carb', 0)),
             protein=float(data.get('prot', 0)),
@@ -269,6 +261,7 @@ def api_simpan_bahan():
             fiber=float(data.get('fiber', 0)),
             calcium=float(data.get('calcium', 0)),
             iron=float(data.get('iron', 0)),
+            # Tambahkan default 0 untuk mikronutrien lain jika tidak dikirim JS
             vit_a=float(data.get('vita', 0)),
             vit_c=float(data.get('vitc', 0)),
             folate=float(data.get('folate', 0)),
@@ -276,10 +269,50 @@ def api_simpan_bahan():
         )
         db.session.add(new_item)
         db.session.commit()
-        return jsonify({"status": "success", "message": "Bahan baku standar 2025 disimpan!"}), 200
+        return jsonify({"status": "success", "message": "Bahan baku berhasil disimpan!"}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 400
+
+# WAJIB TAMBAH: Route Update agar tombol Edit di JS berfungsi
+@blueprint.route('/api/update-bahan-master/<int:id>', methods=['POST'])
+@login_required
+@admin_required
+def api_update_bahan(id):
+    try:
+        item = MasterIngredient.query.filter_by(id=id, user_id=current_user.id).first()
+        if not item:
+            return jsonify({"status": "error", "message": "Data tidak ditemukan"}), 404
+            
+        data = request.get_json()
+        item.name = data.get('name')
+        item.category = data.get('category')
+        item.weight = float(data.get('weight', 0))
+        item.kcal = float(data.get('kcal', 0))
+        item.protein = float(data.get('prot', 0))
+        item.fat = float(data.get('fat', 0))
+        item.carb = float(data.get('carb', 0))
+        item.fiber = float(data.get('fiber', 0))
+        item.calcium = float(data.get('calcium', 0))
+        item.iron = float(data.get('iron', 0))
+        
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Data diperbarui!"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+# WAJIB TAMBAH: Route Delete agar tombol Hapus berfungsi
+@blueprint.route('/api/hapus-bahan-master/<int:id>', methods=['DELETE'])
+@login_required
+@admin_required
+def api_hapus_bahan(id):
+    item = MasterIngredient.query.filter_by(id=id, user_id=current_user.id).first()
+    if item:
+        db.session.delete(item)
+        db.session.commit()
+        return jsonify({"status": "success"}), 200
+    return jsonify({"status": "error", "message": "Gagal menghapus"}), 400
     
 
 @blueprint.route('/verifikasi-penerima')

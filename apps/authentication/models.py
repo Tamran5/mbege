@@ -107,6 +107,7 @@ class Users(db.Model, UserMixin):
                                       foreign_keys=[LogDistribusi.dapur_id], 
                                       backref='dapur_pengirim', 
                                       lazy='dynamic')
+    my_chats = db.relationship('ChatHistory', backref='sender', lazy='dynamic')
 
     temp_otp = db.Column(db.String(6), nullable=True)
     otp_created_at = db.Column(db.DateTime, nullable=True)
@@ -309,6 +310,31 @@ class AttendanceLog(db.Model):
     check_in = db.Column(db.DateTime, default=datetime.now)
     check_out = db.Column(db.DateTime, nullable=True)
     status_note = db.Column(db.String(50), default='Hadir')
+
+# --- MODEL MEMORI CHATBOT (RAG & HISTORY) ---
+class ChatHistory(db.Model):
+    __tablename__ = 'chat_history'
+
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # Menghubungkan ke user yang sedang bertanya
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    # Konten percakapan
+    message = db.Column(db.Text, nullable=False) # Pertanyaan User
+    reply = db.Column(db.Text, nullable=False)   # Jawaban Llama 3
+    
+    # Metadata
+    timestamp = db.Column(db.DateTime, default=datetime.now)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user': self.user_id,
+            'message': self.message,
+            'reply': self.reply,
+            'time': self.timestamp.strftime('%H:%M')
+        }
 
 # --- LOGIN LOADER ---
 @login_manager.user_loader

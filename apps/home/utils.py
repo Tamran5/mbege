@@ -4,112 +4,113 @@ import cv2
 import re
 import easyocr
 import numpy as np
+import base64
 from ultralytics import YOLO
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from llama_cpp import Llama # Library untuk model Llama 3 GGUF Anda
+
+
 
 # --- KONFIGURASI PATH ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SENTIMENT_MODEL_PATH = os.path.join(BASE_DIR, 'ai_model', 'sentiment')
 KTP_MODEL_PATH = os.path.join(BASE_DIR, 'ai_model', 'ktp', 'best.pt')
+# Path ke file blob 4.34 GB Llama 3 yang Anda unduh
+LLAMA_MODEL_PATH = os.path.join(BASE_DIR, 'ai_model', 'chatbot', 'llama-3-8b.gguf')
 
-# --- LOAD MODEL SENTIMEN (GLOBAL) ---
-try:
-    tokenizer = AutoTokenizer.from_pretrained(SENTIMENT_MODEL_PATH)
-    sentiment_model = AutoModelForSequenceClassification.from_pretrained(SENTIMENT_MODEL_PATH)
-    SENTIMENT_LOADED = True
-except Exception as e:
-    print(f"Gagal memuat model Sentimen: {e}")
-    SENTIMENT_LOADED = False
+# --- LOAD MODELS (GLOBAL SINGLETON) ---
+def load_models():
+    models = {}
+    try:
+        # 1. Sentiment Model
+        models['sentiment_tk'] = AutoTokenizer.from_pretrained(SENTIMENT_MODEL_PATH)
+        models['sentiment_md'] = AutoModelForSequenceClassification.from_pretrained(SENTIMENT_MODEL_PATH)
+        
+        # 2. YOLO KTP & OCR
+        models['ktp_yolo'] = YOLO(KTP_MODEL_PATH)
+        models['ocr_reader'] = easyocr.Reader(['id'], gpu=torch.cuda.is_available())
+        
+        # 3. Llama 3 Chatbot (Integrated)
+        if os.path.exists(LLAMA_MODEL_PATH):
+            models['chatbot'] = Llama(model_path=LLAMA_MODEL_PATH, n_ctx=2048, n_threads=4)
+        
+        print("Seluruh Model AI Berhasil Dimuat.")
+        return models
+    except Exception as e:
+        print(f"Error Loading Models: {e}")
+        return None
 
-# --- LOAD MODEL KTP & OCR (GLOBAL) ---
-try:
-    model_ktp = YOLO(KTP_MODEL_PATH)
-    reader = easyocr.Reader(['id'])
-    KTP_LOADED = True
-except Exception as e:
-    print(f"Gagal memuat model KTP/OCR: {e}")
-    KTP_LOADED = False
-
-# ==========================================
-# 1. FUNGSI ANALISIS SENTIMEN (EXISTING)
-# ==========================================
-def get_sentiment_prediction(text):
-    if not SENTIMENT_LOADED or not text:
-        return "Netral"
-    
-    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=128)
-    
-    with torch.no_grad():
-        outputs = sentiment_model(**inputs)
-        probs = torch.nn.functional.softmax(outputs.logits, dim=-1)
-        prediction = torch.argmax(probs, dim=-1).item()
-    
-    mapping = {0: 'Negatif', 1: 'Netral', 2: 'Positif'}
-    return mapping.get(prediction, "Netral")
+AI_MODELS = load_models()
 
 # ==========================================
-# 2. FUNGSI VERIFIKASI KTP (NEW)
+# 1. FUNGSI CHATBOT LLAMA 3 (NEW INTEGRATION)
+# ==========================================
+def get_chatbot_response(user_input):
+    """Menghasilkan jawaban dari Llama 3 dengan konteks Dapur Margadana."""
+    if 'chatbot' not in AI_MODELS:
+        return "Chatbot sedang tidak aktif."
+    
+    prompt = f"System: Anda adalah asisten digital untuk program Makan Bergizi Gratis di Kota Tegal.\nUser: {user_input}\nAssistant:"
+    
+    output = AI_MODELS['chatbot'](
+        prompt, 
+        max_tokens=256, 
+        stop=["User:", "\n"], 
+        echo=False
+    )
+    return output['choices'][0]['text'].strip()
+
+# ==========================================
+# 2. FUNGSI VERIFIKASI KTP (OPTIMIZED)
 # ==========================================
 def proses_verifikasi_ktp(img_bytes):
-    """
-    Fungsi utama untuk memproses gambar KTP dari Flutter.
-    Menangani: Blur, Bukan KTP, dan Ekstraksi Data.
-    """
-    # 1. Konversi bytes ke format OpenCV
     nparr = np.frombuffer(img_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     
     if img is None:
         return {"status": "error", "message": "Format gambar tidak didukung"}
 
-    # 2. LAPISAN 1: Deteksi Blur (PCD Logic)
+    # LAPISAN 1: Deteksi Blur
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
-    
-    # Threshold 100 (bisa disesuaikan, makin tinggi makin ketat)
-    if laplacian_var < 100:
-        return {
-            "status": "rejected", 
-            "message": "Foto terlalu buram, silakan ambil foto ulang dengan cahaya cukup"
-        }
+    if laplacian_var < 80: # Threshold sedikit dilonggarkan agar tidak terlalu sensitif
+        return {"status": "rejected", "message": "Foto terlalu buram"}
 
-    # 3. LAPISAN 2: Jalankan YOLOv11
-    results = model_ktp.predict(source=img, conf=0.6, verbose=False)[0]
+    # LAPISAN 2: YOLOv11 Detection
+    results = AI_MODELS['ktp_yolo'].predict(source=img, conf=0.5, verbose=False)[0]
     
-    # 4. LAPISAN 3: Logika Penolakan (Bukan KTP)
-    # KTP asli harus memiliki minimal komponen utama (misal: NIK, Nama, Foto, dsb)
-    # Jika terdeteksi kurang dari 3 komponen, anggap bukan KTP
-    if len(results.boxes) < 3:
-        return {
-            "status": "rejected", 
-            "message": "Gambar tidak dikenali sebagai KTP. Pastikan seluruh kartu terlihat jelas."
-        }
+    if len(results.boxes) < 2:
+        return {"status": "rejected", "message": "Komponen KTP tidak terdeteksi lengkap"}
 
-    # 5. EKSTRAKSI DATA (Jika lolos validasi)
-    hasil_ekstraksi = {"nik": "Tidak terbaca", "nama": "Tidak terbaca"}
-    
+    # EKSTRAKSI DATA
+    hasil = {"nik": "Tidak terbaca", "nama": "Tidak terbaca"}
     for box in results.boxes:
-        label = model_ktp.names[int(box.cls[0])].lower()
+        label = AI_MODELS['ktp_yolo'].names[int(box.cls[0])].lower()
         coords = box.xyxy[0].cpu().numpy().astype(int)
-        
-        # Crop area deteksi untuk OCR
         crop = img[coords[1]:coords[3], coords[0]:coords[2]]
 
         if label == 'nik':
-            ocr_res = reader.readtext(crop, detail=0)
-            text_nik = "".join(ocr_res).replace(" ", "").replace(":", "")
-            # Validasi Regex: Harus 16 digit
-            match = re.search(r'\d{16}', text_nik)
-            if match:
-                hasil_ekstraksi['nik'] = match.group(0)
+            ocr_res = AI_MODELS['ocr_reader'].readtext(crop, detail=0)
+            text = "".join(ocr_res).upper()
+            # Membersihkan kesalahan umum OCR pada angka
+            text = text.replace('B', '6').replace('O', '0').replace('I', '1').replace('S', '5')
+            nik_match = re.search(r'\d{16}', text)
+            if nik_match: hasil['nik'] = nik_match.group(0)
 
         elif label == 'nama':
-            ocr_res = reader.readtext(crop, detail=0)
-            # Membersihkan teks nama dari karakter aneh
-            nama_clean = " ".join(ocr_res).replace(":", "").strip()
-            hasil_ekstraksi['nama'] = nama_clean
+            ocr_res = AI_MODELS['ocr_reader'].readtext(crop, detail=0)
+            hasil['nama'] = " ".join(ocr_res).replace(":", "").strip().upper()
 
-    return {
-        "status": "success", 
-        "data": hasil_ekstraksi
-    }
+    return {"status": "success", "data": hasil}
+
+# ==========================================
+# 3. ANALISIS SENTIMEN (EXISTING)
+# ==========================================
+def get_sentiment(text):
+    inputs = AI_MODELS['sentiment_tk'](text, return_tensors="pt", padding=True, truncation=True, max_length=128)
+    with torch.no_grad():
+        outputs = AI_MODELS['sentiment_md'](**inputs)
+        prediction = torch.argmax(torch.nn.functional.softmax(outputs.logits, dim=-1), dim=-1).item()
+    
+    mapping = {0: 'Negatif', 1: 'Netral', 2: 'Positif'}
+    return mapping.get(prediction, "Netral")
