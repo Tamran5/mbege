@@ -4,6 +4,7 @@ from flask_login import current_user, login_user, logout_user
 from authlib.integrations.flask_client import OAuth
 from werkzeug.utils import secure_filename
 import os
+from sqlalchemy import or_
 import uuid
 
 # Import objek global dari apps
@@ -122,24 +123,29 @@ def google_callback():
 def login():
     login_form = LoginForm(request.form)
     
-    # A. PRIORITAS: PROSES DATA YANG DIKETIK (POST)
     if request.method == 'POST':
-        email = request.form.get('email')
+        # 'identifier' bisa berisi username atau email dari input NIP/ID
+        identifier = request.form.get('email') 
         password = request.form.get('password')
-        user = Users.query.filter_by(email=email).first()
 
-        # Debug: Cek di terminal apakah user ditemukan
-        print(f">>> MENCARI USER: {email}")
+        # PERBAIKAN: Cari berdasarkan username ATAU email
+        user = Users.query.filter(
+            or_(Users.username == identifier, Users.email == identifier)
+        ).first()
+
+        print(f">>> MENCARI USER: {identifier}")
 
         if user and user.verify_password(password):
-            # 1. Bersihkan sesi Santoso secara total sebelum Yanto masuk
             logout_user()
             session.clear()
-            
-            # 2. Login sebagai Yanto
             login_user(user)
-            print(f">>> LOGIN BERHASIL: {user.email}")
+            print(f">>> LOGIN BERHASIL: {user.username}")
             return redirect(url_for('home_blueprint.index'))
+        
+        print(">>> LOGIN GAGAL: Data tidak cocok di DB.")
+        return render_template('accounts/login.html', 
+                               msg='Username atau Password salah', 
+                               form=login_form)
         
         # Jika gagal di sini, berarti data di DB memang tidak cocok
         print(">>> LOGIN GAGAL: Password atau Email salah di DB.")
@@ -157,6 +163,7 @@ def login():
         return redirect(url_for('home_blueprint.index'))
 
     return render_template('accounts/login.html', form=login_form)
+
 @blueprint.route('/register-choice')
 def register_choice():
     """Halaman pilihan metode pendaftaran."""

@@ -12,7 +12,6 @@ from flask import current_app
 from apps import db
 from sqlalchemy.orm import aliased
 from apps.home import blueprint
-from apps.home.utils import get_sentiment_prediction
 from flask import jsonify
 from functools import wraps
 from flask import abort
@@ -79,6 +78,10 @@ def admin_required(f):
             abort(403) 
         return f(*args, **kwargs)
     return decorated_function
+
+@blueprint.route('/')
+def home():
+    return render_template('home/home.html')
 
 @blueprint.route('/dashboard')
 @login_required
@@ -323,6 +326,51 @@ def process_verifikasi(action, user_id):
 
     return redirect(url_for('home_blueprint.verifikasi_penerima'))
 
+
+@blueprint.route('/api/update-activity-status/<int:activity_id>', methods=['POST'])
+@login_required
+@admin_required
+def update_activity_status(activity_id):
+    # 1. Cek Role Secara Manual
+    # Hanya izinkan jika role adalah 'super_admin'
+    if current_user.role != 'super_admin':
+        return jsonify({
+            'status': 'error', 
+            'message': 'Akses ditolak. Anda bukan Super Admin.'
+        }), 403
+
+    try:
+        data = request.json
+        new_status = data.get('status') # 'selesai' atau 'ditolak'
+
+        if not new_status:
+            return jsonify({'status': 'error', 'message': 'Status tidak ditentukan'}), 400
+
+        # 2. Cari data aktivitas dapur
+        activity = AktivitasDapur.query.get(activity_id)
+
+        if not activity:
+            return jsonify({'status': 'error', 'message': 'Aktivitas tidak ditemukan'}), 404
+
+        # 3. Update Status dan Metadata
+        activity.status = new_status
+        
+        if new_status == 'selesai':
+            activity.waktu_selesai = datetime.now() # Mencatat waktu verifikasi
+            activity.catatan = "Disetujui oleh Super Admin"
+        elif new_status == 'ditolak':
+            activity.catatan = "Ditolak oleh Super Admin"
+
+        db.session.commit()
+
+        return jsonify({
+            'status': 'success', 
+            'message': f'Aktivitas berhasil di-update ke status {new_status}'
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 @blueprint.route('/api/update-bahan-master/<int:id>', methods=['POST'])
 @login_required
 @admin_required
@@ -565,12 +613,25 @@ def api_ulasan_stats():
 @login_required
 @admin_required
 def route_monitoring():
-    """Endpoint: home_blueprint.route_monitoring"""
-    if getattr(current_user, 'role', None) != 'admin_dapur':
+    if current_user.role != 'admin_dapur':
         return redirect(url_for('home_blueprint.index'))
     
+    # FIX 1: Ambil data aktivitas hari ini untuk user yang login
+    from datetime import datetime
+    today = datetime.now().date()
+    activities = AktivitasDapur.query.filter_by(
+        user_id=current_user.id, 
+        tanggal=today
+    ).order_by(AktivitasDapur.waktu_mulai.desc()).all()
+
     total_target = sum(item.kuota for item in current_user.my_beneficiaries)
-    return render_template('home/monitoring.html', segment='monitoring', target_porsi=total_target)
+    
+    # FIX 2: Kirim variabel 'activities' ke template
+    return render_template('home/monitoring.html', 
+                           activities=activities, 
+                           target_porsi=total_target)
+
+
     
 
 @blueprint.route('/api/submit-activity', methods=['POST'])
@@ -606,7 +667,7 @@ def api_submit_activity():
             jenis_aktivitas=process_name,
             bukti_foto=filename,
             waktu_mulai=datetime.now(),
-            status='Proses'
+            status='proses'
         )
         db.session.add(new_activity)
         db.session.commit()
@@ -615,6 +676,13 @@ def api_submit_activity():
     except Exception as e:
         db.session.rollback()
         return jsonify({'status': 'error', 'message': str(e)}), 500
+    
+@blueprint.route('/api/kitchen-locations', methods=['GET'])
+@login_required
+def api_kitchen_locations():
+    # Mengambil daftar dapur agar filter di halaman monitoring tidak error
+    kitchens = Users.query.filter_by(role='admin_dapur').all()
+    return jsonify([{'id': k.id, 'nama': k.kitchen_name or k.username} for k in kitchens])
 
 # =========================================================
 #  SUPER ADMIN (ADMIN GIZI)
@@ -646,6 +714,33 @@ def verifikasi_mitra():
     pending_users = Users.query.filter_by(role='admin_dapur', is_approved=False, district=wilayah).all() if wilayah else []
     return render_template('home/superadmin_verifikasi.html', pendaftar=pending_users, segment='verifikasi')
 
+@blueprint.route('/monitoring-live')
+@login_required
+def monitoring_live():
+    # 1. Proteksi Role: Hanya izinkan super_admin
+    if current_user.role != 'super_admin':
+        # Mengembalikan error 403 (Forbidden) jika bukan super_admin
+        return abort(403) 
+
+    # 2. Lanjutkan Query jika lolos validasi
+    activities_query = db.session.query(AktivitasDapur, Users).join(
+        Users, AktivitasDapur.user_id == Users.id
+    ).order_by(AktivitasDapur.waktu_mulai.desc()).all()
+
+    formatted_activities = []
+    for activity, user in activities_query:
+        formatted_activities.append({
+            'waktu': activity.waktu_mulai.strftime('%H:%M'),
+            'nama_dapur': user.kitchen_name or user.username,
+            'inisial': (user.kitchen_name or user.username)[0].upper(),
+            'alamat': user.district or user.address or '-',
+            'tahap': activity.jenis_aktivitas,
+            'img_url': f"/static/uploads/activities/{activity.bukti_foto}",
+            'status': activity.status.lower()
+        })
+
+    return render_template('home/monitoring_proses.html', activities=formatted_activities)
+
 @blueprint.route('/data-mitra')
 @login_required
 @admin_required
@@ -656,6 +751,7 @@ def data_mitra():
     wilayah = getattr(current_user, 'district', None)
     mitra_aktif = Users.query.filter_by(role='admin_dapur', is_approved=True, district=wilayah).all() if wilayah else []
     return render_template('home/data_mitra.html', mitra_list=mitra_aktif, segment='data_mitra')
+
 
 @blueprint.route('/peta-sebaran')
 @login_required

@@ -25,7 +25,7 @@
 <div class="container-fluid mt--6">
     <div class="row">
         <div class="col">
-            <div class="card">
+            <div class="card shadow">
                 <div class="card-header border-0">
                     <div class="row align-items-center">
                         <div class="col-md-4">
@@ -33,18 +33,15 @@
                         </div>
                         <div class="col-md-8 text-right">
                             <form class="form-inline float-right">
-                                <select class="form-control form-control-sm mr-2">
-                                    <option>Semua Dapur</option>
-                                    <option>Dapur Tegal Selatan</option>
-                                    <option>Dapur Margadana</option>
+                                <select class="form-control form-control-sm mr-2" id="filterTahapan">
+                                    <option value="">Semua Tahapan</option>
+                                    <option value="Persiapan">Persiapan</option>
+                                    <option value="Memasak">Memasak</option>
+                                    <option value="Packing">Packing</option>
                                 </select>
-                                <select class="form-control form-control-sm mr-2">
-                                    <option>Semua Tahapan</option>
-                                    <option>Persiapan</option>
-                                    <option>Memasak</option>
-                                    <option>Packing</option>
-                                </select>
-                                <button type="button" class="btn btn-sm btn-primary">Filter</button>
+                                <button type="button" class="btn btn-sm btn-primary" onclick="location.reload()">
+                                    <i class="fas fa-sync"></i> Refresh Data
+                                </button>
                             </form>
                         </div>
                     </div>
@@ -68,6 +65,7 @@
                                 <td class="text-muted font-weight-bold">
                                     {{ item.waktu }}
                                 </td>
+                                
                                 <td>
                                     <div class="media align-items-center">
                                         <div class="avatar avatar-sm rounded-circle mr-3 bg-gradient-info text-white">
@@ -80,37 +78,55 @@
                                         </div>
                                     </div>
                                 </td>
+
                                 <td>
-                                    {% if item.tahap == 'Memasak' %}
+                                    {% if 'Memasak' in item.tahap %}
                                         <span class="badge badge-dot"><i class="bg-warning"></i> Memasak</span>
-                                    {% elif item.tahap == 'Packing' %}
+                                    {% elif 'Packing' in item.tahap or 'Pengemasan' in item.tahap %}
                                         <span class="badge badge-dot"><i class="bg-info"></i> Packing</span>
+                                    {% elif 'Distribusi' in item.tahap %}
+                                        <span class="badge badge-dot"><i class="bg-success"></i> Distribusi</span>
                                     {% else %}
-                                        <span class="badge badge-dot"><i class="bg-primary"></i> Persiapan</span>
+                                        <span class="badge badge-dot"><i class="bg-primary"></i> {{ item.tahap }}</span>
                                     {% endif %}
                                 </td>
+
                                 <td>
                                     <button class="btn btn-sm btn-outline-primary" 
                                             onclick="lihatBukti('{{ item.img_url }}', '{{ item.nama_dapur }}', '{{ item.tahap }}')">
                                         <i class="fas fa-camera"></i> Lihat
                                     </button>
                                 </td>
+
                                 <td>
-                                    {% if item.status == 'pending' %}
+                                    {% if item.status == 'proses' %}
                                         <span class="badge badge-warning">Perlu Cek</span>
-                                    {% elif item.status == 'approved' %}
-                                        <span class="badge badge-success">Valid</span>
+                                    {% elif item.status == 'selesai' %}
+                                        <span class="badge badge-success">Valid / Disetujui</span>
                                     {% else %}
-                                        <span class="badge badge-danger">Isu/Ditolak</span>
+                                        <span class="badge badge-danger">Isu / Ditolak</span>
                                     {% endif %}
                                 </td>
+
                                 <td>
-                                    {% if item.status == 'pending' %}
-                                        <button class="btn btn-sm btn-success" title="Approve"><i class="fas fa-check"></i></button>
-                                        <button class="btn btn-sm btn-danger" title="Reject"><i class="fas fa-times"></i></button>
+                                    {% if item.status == 'proses' %}
+                                        <button class="btn btn-sm btn-success" title="Setujui" 
+                                                onclick="updateStatus('{{ item.id }}', 'selesai')">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" title="Tolak" 
+                                                onclick="updateStatus('{{ item.id }}', 'ditolak')">
+                                            <i class="fas fa-times"></i>
+                                        </button>
                                     {% else %}
-                                        <span class="text-muted text-sm"><i class="fas fa-lock"></i> Selesai</span>
+                                        <span class="text-muted text-sm"><i class="fas fa-lock"></i> Terverifikasi</span>
                                     {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <i class="fas fa-info-circle mr-2"></i> Belum ada aktivitas dapur yang masuk hari ini.
                                 </td>
                             </tr>
                             {% endfor %}
@@ -122,7 +138,6 @@
                     <nav aria-label="...">
                         <ul class="pagination justify-content-end mb-0">
                             <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                            <li class="page-item"><a class="page-link" href="#">2</a></li>
                         </ul>
                     </nav>
                 </div>
@@ -136,15 +151,15 @@
     <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Bukti Aktivitas</h5>
+                <h5 class="modal-title"><i class="fas fa-shield-halved mr-2"></i> Verifikasi Bukti Aktivitas</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body text-center bg-secondary">
-                <img id="imgPreview" src="" class="img-fluid rounded shadow" style="max-height: 500px; width: auto;">
-                <h3 class="mt-3 text-dark" id="modalTitle">-</h3>
-                <p id="modalSubtitle" class="text-muted mb-0">-</p>
+                <img id="imgPreview" src="" class="img-fluid rounded shadow-lg" style="max-height: 500px; width: auto;">
+                <h3 class="mt-3 text-dark font-weight-bold mb-0" id="modalTitle">-</h3>
+                <p id="modalSubtitle" class="text-muted">-</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
@@ -157,14 +172,45 @@
 
 {% block javascripts %}
 <script>
+    // 1. Fungsi menampilkan modal foto
     function lihatBukti(url, dapur, tahap) {
-        // Ganti gambar dengan placeholder jika url kosong
-        if(!url) url = "https://via.placeholder.com/800x600?text=Contoh+Foto+Masakan";
-        
-        document.getElementById('imgPreview').src = url;
+        // Ganti ke placeholder jika gambar bermasalah
+        const finalUrl = url ? url : "https://via.placeholder.com/800x600?text=Foto+Aktivitas+Tidak+Ditemukan";
+        document.getElementById('imgPreview').src = finalUrl;
         document.getElementById('modalTitle').innerText = dapur;
-        document.getElementById('modalSubtitle').innerText = "Sedang dalam proses: " + tahap;
+        document.getElementById('modalSubtitle').innerText = "Tahapan Proses: " + tahap;
         $('#modalBukti').modal('show');
     }
+
+    // 2. Fungsi Validasi Status ke Backend
+    function updateStatus(activityId, newStatus) {
+        const actionText = newStatus === 'selesai' ? "MENYETUJUI" : "MENOLAK";
+        
+        if(confirm(`Apakah Anda yakin ingin ${actionText} aktivitas ini?`)) {
+            fetch(`/api/update-activity-status/${activityId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    // Refresh halaman untuk memperbarui status di tabel
+                    location.reload();
+                } else {
+                    alert("Gagal memperbarui status: " + (data.message || "Terjadi kesalahan sistem."));
+                }
+            })
+            .catch(err => {
+                console.error("Error:", err);
+                alert("Gagal menghubungi server.");
+            });
+        }
+    }
+
+    // 3. Auto-Refresh Halaman setiap 60 detik (Simulasi Real-time)
+    setTimeout(function(){
+       window.location.reload(1);
+    }, 60000);
 </script>
 {% endblock javascripts %}

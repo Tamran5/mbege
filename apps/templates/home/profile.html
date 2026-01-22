@@ -4,9 +4,10 @@
 
 {% block content %}
 
-<div class="header pb-6 d-flex align-items-center" 
-     style="min-height: 500px; background-image: url(/static/assets/img/theme/profile-cover.jpg); background-size: cover; background-position: center top;">
+<div class="header pb-6 d-flex align-items-center bg-primary" 
+     style="min-height: 350px;">
   <span class="mask bg-gradient-default opacity-8"></span>
+  
   <div class="container-fluid d-flex align-items-center">
     <div class="row">
       <div class="col-lg-10 col-md-10">
@@ -27,19 +28,25 @@
   <div class="row">
     
     <div class="col-xl-4 order-xl-2">
-      <div class="card card-profile">
-        <img src="/static/assets/img/theme/img-1-1000x600.jpg" alt="Image placeholder" class="card-img-top">
+      <div class="card card-profile shadow">
+        <div style="height: 120px;" class="bg-gradient-info rounded-top"></div>
+        
         <div class="row justify-content-center">
           <div class="col-lg-3 order-lg-2">
             <div class="card-profile-image">
               <a href="#">
-                <img src="/static/assets/img/theme/team-4.jpg" class="rounded-circle">
+                <div class="rounded-circle bg-gradient-primary d-flex align-items-center justify-content-center shadow" 
+                     style="width: 140px; height: 140px; border: 6px solid #fff; background-color: #5e72e4; position: absolute; left: 50%; transform: translate(-50%, -50%); z-index: 1;">
+                    <span class="text-white font-weight-bold" style="font-size: 3.5rem; text-transform: uppercase;">
+                        {{ (current_user.fullname or current_user.username)[0] }}
+                    </span>
+                </div>
               </a>
             </div>
           </div>
         </div>
         
-        <div class="card-header text-center border-0 pt-8 pt-md-4 pb-0 pb-md-4">
+        <div class="card-header text-center border-0 pt-8 pt-md-4 pb-0 pb-md-4" style="margin-top: 70px;">
           <div class="d-flex justify-content-center">
             {% if current_user.role == 'admin_dapur' %}
                 <a href="#" class="btn btn-sm btn-info mr-4">Admin Dapur</a>
@@ -49,14 +56,14 @@
           </div>
         </div>
 
-        <div class="card-body pt-0 mt-4">
+        <div class="card-body pt-0 mt-2">
           <div class="text-center">
             <h5 class="h3 font-weight-bold text-capitalize mb-0">
                 {% if current_user.role == 'super_admin' %}
                     {{ current_user.fullname or current_user.username }}
                 {% else %}
                     {{ current_user.kitchen_name or 'Nama Dapur' }}
-                    <span class="font-weight-light d-block h5 mt-1 text-muted">{{ current_user.district or '-' }}, {{ current_user.regency or '-' }}</span>
+                    <span class="font-weight-light d-block h5 mt-1 text-muted">{{ current_user.district or 'KECAMATAN' }}, {{ current_user.regency or '-' }}</span>
                 {% endif %}
             </h5>
             
@@ -88,7 +95,6 @@
         
         <div class="card-body">
             <form method="POST">
-            {# form.hidden_tag() #} 
             
             <h6 class="heading-small text-muted mb-4">Informasi Akun & Kontak</h6>
             <div class="pl-lg-4">
@@ -134,20 +140,6 @@
                   </div>
                 </div>
               </div>
-              <div class="row">
-                <div class="col-lg-6">
-                  <div class="form-group">
-                    <label class="form-control-label">Kecamatan</label>
-                    <input type="text" class="form-control" value="{{ current_user.district or '' }}" readonly>
-                  </div>
-                </div>
-                <div class="col-lg-6">
-                  <div class="form-group">
-                    <label class="form-control-label">Kabupaten / Kota</label>
-                    <input type="text" class="form-control" value="{{ current_user.regency or '' }}" readonly>
-                  </div>
-                </div>
-              </div>
             </div>
 
             <hr class="my-4" />
@@ -165,7 +157,6 @@
                                 </span>
                             </div>
                         </div>
-                        <small class="text-muted">Gunakan kombinasi angka dan huruf untuk keamanan.</small>
                     </div>
                  </div>
               </div>
@@ -207,7 +198,7 @@
 
             editableInputs.forEach(function(input) {
                 input.removeAttribute('readonly');
-                input.classList.add('is-editing'); // Tambahkan class jika perlu style khusus
+                input.classList.add('is-editing');
             });
         });
 
@@ -230,6 +221,10 @@
     .is-editing {
         background-color: #fff !important;
         border-color: #5e72e4 !important;
+    }
+    /* Memastikan card-profile-image memiliki kontainer relatif */
+    .card-profile-image {
+        position: relative;
     }
 </style>
 {% endblock javascripts %}

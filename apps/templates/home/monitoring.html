@@ -4,6 +4,15 @@
 
 {% block stylesheets %}
 <link rel="stylesheet" href="/static/assets/css/monitoring.css">
+<style>
+    .camera-container {
+        position: relative; width: 100%; min-height: 250px; background: #f8f9fe;
+        border: 2px dashed #dee2e6; border-radius: 15px; overflow: hidden;
+        display: flex; align-items: center; justify-content: center;
+    }
+    #videoElement, #photoPreview { width: 100%; height: auto; display: none; border-radius: 10px; }
+    .alert-rejection { background-color: #fff5f5; border-left: 4px solid #f5365c; padding: 10px; margin-top: 8px; border-radius: 4px; border: 1px solid #fad2d2; }
+</style>
 {% endblock stylesheets %}
 
 {% block content %}
@@ -11,55 +20,21 @@
 <div class="header bg-primary pb-6">
     <div class="container-fluid">
         <div class="header-body">
-
             <div class="row align-items-center py-4">
-                <div class="col-lg-6 col-7">
-                    <h6 class="h2 text-white d-inline-block mb-0">Halo, Admin Dapur!</h6>
-                    <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
-                        <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
-                            <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
-                            <li class="breadcrumb-item active">Input Harian</li>
-                        </ol>
-                    </nav>
-                </div>
-            </div>
-
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div id="statusCard" class="card bg-white border-0 shadow">
-                        <div class="card-body py-3">
-                            <div class="row align-items-center">
-                                <div class="col-auto">
-                                    <div id="statusIconBg"
-                                        class="icon icon-shape bg-light text-primary rounded-circle shadow">
-                                        <i id="statusIcon" class="fas fa-sync fa-spin"></i>
-                                    </div>
-                                </div>
-                                <div class="col ml--2">
-                                    <h4 class="mb-0 text-dark text-uppercase" id="statusTitle">MEMUAT SISTEM...</h4>
-                                    <span class="text-muted" id="statusDesc">Sinkronisasi jam server...</span>
-                                </div>
-                                <div class="col-auto text-right">
-                                    <h2 class="text-primary mb-0" id="clockDisplay" style="font-family: monospace;">
-                                        00:00:00</h2>
-                                </div>
-                            </div>
-                            <div class="progress mt-3 mb-0" style="height: 5px;">
-                                <div id="statusBar" class="progress-bar bg-primary" style="width: 0%;"></div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="col-lg-6">
+                    <h6 class="h2 text-white d-inline-block mb-0">Halo, {{ current_user.username }}!</h6>
+                    <p class="text-white opacity-8 mb-0">Update progres masak harian dapur Anda.</p>
                 </div>
             </div>
 
             <div class="row">
                 <div class="col-xl-3 col-md-6">
-                    <div class="card card-stats">
+                    <div class="card card-stats shadow">
                         <div class="card-body">
                             <div class="row">
                                 <div class="col">
                                     <h5 class="card-title text-uppercase text-muted mb-0">Target Porsi</h5>
-                                    <span class="h2 font-weight-bold mb-0">{{ target_porsi }}</span>
+                                    <span class="h2 font-weight-bold mb-0">{{ target_porsi or '0' }}</span>
                                 </div>
                                 <div class="col-auto">
                                     <div class="icon icon-shape bg-gradient-red text-white rounded-circle shadow">
@@ -70,21 +45,17 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="col-xl-3 col-md-6">
-                    <div class="card card-stats">
+                <div class="col-xl-4 col-md-6">
+                    <div class="card card-stats shadow">
                         <div class="card-body">
-                            <div class="row">
-                                <div class="col" style="min-width: 0;">
-                                    <h5 class="card-title text-uppercase text-muted mb-0">Aktivitas Terakhir</h5>
-                                    <span class="h2 font-weight-bold mb-0 d-block text-truncate" id="lastAction"
-                                        title="Menunggu Input...">
-                                        -
-                                    </span>
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <h5 class="card-title text-uppercase text-muted mb-0">Jam Sistem</h5>
+                                    <span class="h2 font-weight-bold mb-0" id="clockDisplay">00:00:00</span>
                                 </div>
                                 <div class="col-auto">
-                                    <div class="icon icon-shape bg-gradient-orange text-white rounded-circle shadow">
-                                        <i class="fas fa-history"></i>
+                                    <div class="icon icon-shape bg-gradient-primary text-white rounded-circle shadow">
+                                        <i class="fas fa-clock"></i>
                                     </div>
                                 </div>
                             </div>
@@ -92,32 +63,22 @@
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
 
 <div class="container-fluid mt--6">
     <div class="row">
-
-        <div class="col-xl-5 order-xl-2">
-            <div class="card">
+        <div class="col-xl-5">
+            <div class="card shadow">
                 <div class="card-header bg-white border-0">
-                    <div class="row align-items-center">
-                        <div class="col-8">
-                            <h3 class="mb-0">Input Aktivitas</h3>
-                        </div>
-                        <div class="col-4 text-right">
-                            <span class="badge badge-pill badge-primary">Wajib</span>
-                        </div>
-                    </div>
+                    <h3 class="mb-0">Update Progres Masak</h3>
                 </div>
                 <div class="card-body">
                     <form id="kitchenForm">
-
                         <div class="form-group">
-                            <label class="form-control-label font-weight-bold">Tahapan Proses</label>
-                            <select id="processInput" class="form-control" required>
+                            <label class="form-control-label">Tahapan Proses</label>
+                            <select id="processInput" class="form-control text-dark font-weight-bold" required>
                                 <option value="" disabled selected>Pilih aktivitas...</option>
                                 <option value="Persiapan Bahan">Persiapan Bahan</option>
                                 <option value="Pengolahan/Memasak">Pengolahan/Memasak</option>
@@ -128,32 +89,13 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-control-label font-weight-bold">Waktu Pencatatan (Otomatis)</label>
-                            <div class="input-group input-group-merge">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text"><i class="far fa-clock"></i></span>
+                            <label class="form-control-label">Ambil Bukti Foto (Real-time)</label>
+                            <div class="camera-container" id="cameraBox">
+                                <div id="cameraPlaceholder" class="text-center">
+                                    <i class="fas fa-camera fa-3x text-muted mb-2"></i>
+                                    <p class="text-sm">Gunakan kamera untuk bukti valid</p>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="startCamera()">Aktifkan Kamera</button>
                                 </div>
-                                <input type="text" id="autoTimeInput" class="form-control font-weight-bold text-dark"
-                                    readonly style="background-color: #e9ecef; cursor: not-allowed;">
-                            </div>
-                            <small class="text-muted">Waktu diambil saat tombol ditekan.</small>
-                        </div>
-
-                        <div class="form-group mt-3">
-                            <label class="form-control-label font-weight-bold">Bukti Foto</label>
-
-                            <div class="camera-container shadow-sm" id="cameraBox">
-                                <div id="cameraPlaceholder">
-                                    <div class="icon">
-                                        <i class="fas fa-camera"></i>
-                                    </div>
-                                    <p class="text-sm">Foto Real-time</p>
-                                    <button type="button" class="btn btn-sm btn-outline-primary px-4"
-                                        onclick="startCamera()">
-                                        <i class="fas fa-power-off mr-2"></i>Aktifkan Kamera
-                                    </button>
-                                </div>
-
                                 <video id="videoElement" autoplay playsinline></video>
                                 <canvas id="canvasElement" style="display:none;"></canvas>
                                 <img id="photoPreview" src="">
@@ -161,37 +103,27 @@
 
                             <div class="row mt-3" id="cameraControls" style="display:none;">
                                 <div class="col-6">
-                                    <button type="button" class="btn btn-warning btn-block shadow-sm"
-                                        onclick="takePhoto()">
-                                        <i class="fas fa-circle mr-1"></i> Jepret
-                                    </button>
+                                    <button type="button" class="btn btn-warning btn-block shadow" onclick="takePhoto()">Jepret</button>
                                 </div>
                                 <div class="col-6">
-                                    <button type="button" class="btn btn-secondary btn-block shadow-sm"
-                                        onclick="resetCamera()">
-                                        <i class="fas fa-sync-alt mr-1"></i> Ulang
-                                    </button>
+                                    <button type="button" class="btn btn-secondary btn-block shadow" onclick="resetCamera()">Ulang</button>
                                 </div>
                             </div>
                             <input type="hidden" id="photoData" required>
                         </div>
 
-                        <button type="submit" class="btn btn-primary btn-lg btn-block mt-4 shadow">
-                            <i class="fas fa-paper-plane mr-2"></i> Update Status
+                        <button type="submit" class="btn btn-primary btn-block btn-lg mt-4 shadow">
+                            <i class="fas fa-paper-plane mr-2"></i>Kirim Laporan
                         </button>
                     </form>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-7 order-xl-1">
-            <div class="card">
+        <div class="col-xl-7">
+            <div class="card shadow">
                 <div class="card-header border-0">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <h3 class="mb-0">Riwayat Hari Ini</h3>
-                        </div>
-                    </div>
+                    <h3 class="mb-0">Riwayat Aktivitas Hari Ini</h3>
                 </div>
                 <div class="table-responsive">
                     <table class="table align-items-center table-flush">
@@ -201,22 +133,123 @@
                                 <th>Aktivitas</th>
                                 <th>Bukti</th>
                                 <th>Status</th>
-                                <th class="text-right">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody id="historyTable">
+                        <tbody>
+                            {% for act in activities %}
+                            <tr>
+                                <td class="font-weight-bold">{{ act.waktu_mulai.strftime('%H:%M') }}</td>
+                                <td>{{ act.jenis_aktivitas }}</td>
+                                <td>
+                                    <a href="/static/uploads/activities/{{ act.bukti_foto }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                        <i class="fas fa-image mr-1"></i>Lihat
+                                    </a>
+                                </td>
+                                <td>
+                                    {# Sinkronisasi status dengan backend (proses/selesai/ditolak) #}
+                                    {% set status_clean = act.status|lower %}
+                                    {% if status_clean == 'proses' %}
+                                        <span class="badge badge-warning">Menunggu Validasi</span>
+                                    {% elif status_clean == 'selesai' %}
+                                        <span class="badge badge-success">Disetujui</span>
+                                    {% elif status_clean == 'ditolak' %}
+                                        <span class="badge badge-danger">Ditolak</span>
+                                        <div class="alert-rejection shadow-sm">
+                                            <small class="text-danger font-weight-bold">Alasan:</small><br>
+                                            <small>{{ act.catatan or 'Data foto tidak sesuai standar QC.' }}</small>
+                                        </div>
+                                    {% else %}
+                                        <span class="badge badge-secondary">{{ act.status }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center py-4 text-muted">Belum ada aktivitas yang dicatat hari ini.</td></tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
     </div>
-
-    {% include "includes/footer.html" %}
 </div>
-
 {% endblock content %}
 
 {% block javascripts %}
-<script src="/static/assets/js/monitoring.js"></script>
+<script>
+    const video = document.getElementById('videoElement');
+    const canvas = document.getElementById('canvasElement');
+    const photoPreview = document.getElementById('photoPreview');
+    const photoDataInput = document.getElementById('photoData');
+    const cameraPlaceholder = document.getElementById('cameraPlaceholder');
+    const cameraControls = document.getElementById('cameraControls');
+
+    // Jam Real-time
+    setInterval(() => {
+        document.getElementById('clockDisplay').textContent = new Date().toLocaleTimeString('en-GB');
+    }, 1000);
+
+    // Fungsi Kamera
+    async function startCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            video.style.display = 'block';
+            cameraPlaceholder.style.display = 'none';
+            cameraControls.style.display = 'flex';
+        } catch (err) { alert("Kamera tidak ditemukan atau akses ditolak."); }
+    }
+
+    function takePhoto() {
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0);
+        const dataURL = canvas.toDataURL('image/jpeg');
+        photoDataInput.value = dataURL;
+        photoPreview.src = dataURL;
+        photoPreview.style.display = 'block';
+        video.style.display = 'none';
+    }
+
+    function resetCamera() {
+        photoDataInput.value = "";
+        photoPreview.style.display = 'none';
+        video.style.display = 'block';
+    }
+
+    // Submit Laporan
+    document.getElementById('kitchenForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const payload = {
+            process: document.getElementById('processInput').value,
+            photo: photoDataInput.value
+        };
+
+        if(!payload.photo) return alert("Harap ambil foto bukti terlebih dahulu!");
+
+        const btn = e.target.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Mengirim...';
+
+        try {
+            const response = await fetch('/api/submit-activity', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+            if(response.status === 201) {
+                location.reload(); 
+            } else {
+                alert("Gagal: " + result.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Kirim Laporan';
+            }
+        } catch (err) {
+            alert("Terjadi kesalahan koneksi.");
+            btn.disabled = false;
+        }
+    });
+</script>
 {% endblock javascripts %}

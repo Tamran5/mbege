@@ -9,12 +9,13 @@ from flask_mail import Mail, Message
 from werkzeug.utils import secure_filename
 from flask_login import current_user
 from apps.authentication.util import hash_pass,  verify_pass
+from sqlalchemy import or_
 
 from apps import db
 from apps.authentication.models import Users, LogDistribusi, Artikel,MasterIngredient, Menus, MenuIngredients,UlasanPenerima
 from . import api_bp
 from apps.api.utils import token_required
-from apps.home.utils import get_sentiment_prediction
+from apps.home.utils import get_sentiment_prediction, proses_verifikasi_ktp
 
 mail = Mail()
 
@@ -638,3 +639,205 @@ def api_submit_ulasan(current_user):
         db.session.rollback()
         print(f"DEBUG ERROR: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 400
+    
+@api_bp.route('/verify-ktp', methods=['POST'])
+def api_verify_ktp():
+    if 'image' not in request.files:
+        return jsonify({"status": "error", "message": "Tidak ada gambar yang diunggah"}), 400
+    
+    file = request.files['image']
+    img_bytes = file.read()
+    
+    # Menjalankan fungsi AI dari util.py
+    result = proses_verifikasi_ktp(img_bytes)
+    
+    return jsonify(result)
+
+
+
+
+# @api_bp.route('/forgot-password', methods=['POST', 'OPTIONS'], strict_slashes=False)
+# def forgot_password():
+#     # 1. Tangani Preflight OPTIONS (Wajib agar tidak Error 500)
+#     if request.method == 'OPTIONS':
+#         return jsonify({"status": "ok"}), 200
+
+#     # 2. Ambil data JSON (Hanya untuk POST)
+#     data = request.get_json()
+    
+#     # Validasi jika data kosong
+#     if not data:
+#         return jsonify({"status": "error", "message": "Format data tidak valid"}), 400
+
+#     identifier = data.get('identifier', '').strip()
+#     print(f"DEBUG: Mencari user dengan identifier: '{identifier}'")
+    
+#     # 3. Logika pencarian user (Gunakan or_ untuk Email/Phone)
+#     from sqlalchemy import or_
+#     user = Users.query.filter(or_(Users.email == identifier, Users.phone == identifier)).first()
+    
+#     if not user:
+#         return jsonify({"status": "error", "message": "Akun tidak ditemukan"}), 404
+
+#     # Generate OTP 6 Digit
+#     otp = ''.join(random.choices(string.digits, k=6))
+#     user.temp_otp = otp
+#     user.otp_created_at = datetime.now(timezone.utc)
+#     db.session.commit()
+
+#     # Kirim OTP ke email yang terdaftar di akun tersebut
+#     msg = Message("Reset Kata Sandi ", recipients=[user.email])
+#     msg.body = f"Halo {user.fullname},\n\nKode OTP Anda untuk reset kata sandi adalah: {otp}"
+    
+#     try:
+#         mail.send(msg)
+#         return jsonify({
+#             "status": "success", 
+#             "message": f"OTP berhasil dikirim ke email: {user.email[:3]}***@***.com",
+#             "phone": user.phone # Kembalikan phone untuk identifikasi di rute reset
+#         }), 200
+#     except Exception as e:
+#         return jsonify({"status": "error", "message": "Gagal mengirim email"}), 500
+
+@api_bp.route('/forgot-password', methods=['POST', 'OPTIONS'], strict_slashes=False)
+def forgot_password():
+    # 1. Handle Preflight OPTIONS untuk CORS
+    if request.method == 'OPTIONS':
+        return jsonify({"status": "ok"}), 200
+
+    # 2. Ambil data dari Flutter
+    data = request.get_json()
+    if not data:
+        return jsonify({"status": "error", "message": "Format data tidak valid"}), 400
+
+    identifier = data.get('identifier', '').strip()
+    
+    # Debug untuk memastikan data masuk ke server
+    print(f"DEBUG: Mencari user dengan identifier: '{identifier}'")
+
+    # 3. Cari user berdasarkan Email ATAU Nomor HP
+    user = Users.query.filter(or_(
+        Users.email == identifier, 
+        Users.phone == identifier
+    )).first()
+
+    if not user:
+        return jsonify({
+            "status": "error", 
+            "message": "Akun tidak ditemukan. Pastikan Email atau No HP benar."
+        }), 200
+
+    # 4. Generate OTP 6 Digit Angka
+    otp = ''.join(random.choices(string.digits, k=6))
+    
+    # Simpan ke Database
+    try:
+        user.temp_otp = otp
+        user.otp_created_at = datetime.now(timezone.utc)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": "Gagal menyimpan data ke server"}), 500
+
+    # 5. Kirim Email melalui Flask-Mail
+    msg = Message(
+        subject="Kode OTP Reset Kata Sandi MBG",
+        sender="noreply@mbg-app.com", # Sesuaikan dengan pengirim Anda
+        recipients=[user.email]
+    )
+    msg.body = f"Halo {user.fullname},\n\nKode OTP Anda untuk reset kata sandi adalah: {otp}\n\nKode ini bersifat rahasia. Mohon jangan berikan kepada siapapun."
+
+    try:
+        mail.send(msg)
+        # Masking email untuk privasi (contoh: yan***@gmail.com)
+        email_parts = user.email.split('@')
+        masked_email = f"{email_parts[0][:3]}***@{email_parts[1]}"
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Kode OTP telah dikirim ke email: {masked_email}",
+            "phone": user.phone # Dikirim balik untuk identifikasi di halaman reset password
+        }), 200
+    except Exception as e:
+        print(f"ERROR MAIL: {str(e)}")
+        return jsonify({
+            "status": "error", 
+            "message": "Gagal mengirim email OTP. Periksa koneksi internet server."
+        }), 500
+
+@api_bp.route('/reset-password', methods=['POST', 'OPTIONS'], strict_slashes=False)
+def reset_password():
+    if request.method == 'OPTIONS':
+        return jsonify({"status": "ok"}), 200
+
+    data = request.get_json()
+    phone = data.get('phone')
+    otp_input = data.get('otp')
+    new_password = data.get('new_password')
+
+    # 1. Cari user berdasarkan nomor HP (yang dikirim balik dari forgot-password)
+    user = Users.query.filter_by(phone=phone).first()
+
+    if not user:
+        return jsonify({"status": "error", "message": "User tidak ditemukan"}), 404
+
+    # 2. Validasi OTP (Pastikan tidak None dan cocok)
+    if user.temp_otp and user.temp_otp == otp_input:
+        # 3. Update Password (Ini akan otomatis di-hash oleh setter model)
+        user.password = new_password 
+        user.temp_otp = None  # Hapus OTP agar tidak bisa dipakai lagi
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success", 
+            "message": "Kata sandi berhasil diperbarui, silakan login kembali"
+        }), 200
+    
+    return jsonify({"status": "error", "message": "Kode OTP salah atau sudah kadaluarsa"}), 400
+
+# apps/api/auth_api.py
+
+@api_bp.route('/google-login', methods=['POST', 'OPTIONS'])
+def google_login():
+    if request.method == 'OPTIONS':
+        return jsonify({"status": "ok"}), 200
+
+    data = request.get_json()
+    email = data.get('email', '').strip().lower()
+
+    # 1. Cari User di Database
+    user = Users.query.filter_by(email=email).first()
+
+    # 2. Proteksi: Hanya user terdaftar yang bisa login
+    if not user:
+        return jsonify({
+            "status": "error",
+            "message": "Akun tidak ditemukan. Silakan lakukan pendaftaran manual terlebih dahulu."
+        }), 200
+
+    # 3. Logika Nama Sekolah untuk Role Siswa
+    display_school_name = user.school_name 
+    if user.role == 'siswa' and user.sekolah_id:
+        sekolah = Users.query.get(user.sekolah_id)
+        display_school_name = sekolah.school_name if sekolah else "Sekolah Belum Terdaftar"
+
+    # 4. Generate JWT Token
+    token = jwt.encode({
+        'user_id': user.id,
+        'role': user.role,
+        'exp': datetime.now(timezone.utc) + timedelta(hours=24)
+    }, current_app.config['SECRET_KEY'], algorithm="HS256")
+
+    # 5. Respon Data (Tanpa Avatar)
+    return jsonify({
+        "status": "success",
+        "token": token,
+        "data": {
+            "name": user.fullname,
+            "email": user.email,
+            "phone": user.phone or "",
+            "role": user.role, # 'siswa', 'pengelola_sekolah', atau 'lansia'
+            "is_approved": bool(user.is_approved),
+            "school_name": display_school_name
+        }
+    }), 200
