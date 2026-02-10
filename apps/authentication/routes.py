@@ -61,18 +61,18 @@ def save_file(file_obj):
 #  AUTENTIKASI GOOGLE
 # =========================================================
 
-# apps/authentication/routes.py
 
 @blueprint.route('/login/google')
 def google_login():
     """Menerima parameter intent: 'login' atau 'register'."""
-    # Ambil intent dari URL, default ke 'login' jika tidak ada
     intent = request.args.get('intent', 'login')
     session['auth_intent'] = intent 
     
     google = get_google_client()
     redirect_uri = url_for('authentication_blueprint.google_callback', _external=True)
-    return google.authorize_redirect(redirect_uri)
+    
+    # TAMBAHKAN parameter prompt='select_account' di sini
+    return google.authorize_redirect(redirect_uri, prompt='select_account')
 
 @blueprint.route('/google-callback')
 def google_callback():
@@ -235,4 +235,5 @@ def register():
 @blueprint.route('/logout')
 def logout():
     logout_user()
+    session.clear() 
     return redirect(url_for('authentication_blueprint.login'))

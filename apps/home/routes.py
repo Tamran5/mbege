@@ -24,7 +24,7 @@ from flask_login import logout_user, current_user
 # --- IMPORT MODELS ---
 from apps.authentication.models import (
     Users, MasterIngredient, Menus, MenuIngredients, 
-    Staff, AttendanceLog, Penerima, AktivitasDapur,UlasanPenerima,LogDistribusi,Artikel
+    Staff, AttendanceLog, Penerima, AktivitasDapur,UlasanPenerima,LogDistribusi,Artikel,LaporanKendala
 )
 
 # =========================================================
@@ -87,7 +87,7 @@ def home():
 @login_required
 @admin_required
 def index():
-    # --- 1. Logika Statistik (Tetap sama) ---
+    # --- 1. Logika Statistik Dasar ---
     Siswa = aliased(Users)
     Sekolah = aliased(Users)
     
@@ -103,29 +103,42 @@ def index():
         .filter(LogDistribusi.dapur_id == current_user.id)\
         .filter(func.date(LogDistribusi.waktu_sampai) == date.today()).scalar() or 0
 
-    # --- 2. LOGIKA GRAFIK 7 HARI TERAKHIR ---
+    # --- 2. HITUNG KEPUASAN AI DINAMIS ---
+    # Mengambil ulasan dari siswa yang terhubung dengan dapur ini
+    total_ulasan = db.session.query(func.count(UlasanPenerima.id))\
+        .join(Users, UlasanPenerima.user_id == Users.id)\
+        .filter(Users.dapur_id == current_user.id).scalar() or 0
+
+    ulasan_positif = db.session.query(func.count(UlasanPenerima.id))\
+        .join(Users, UlasanPenerima.user_id == Users.id)\
+        .filter(Users.dapur_id == current_user.id)\
+        .filter(func.lower(UlasanPenerima.status_ai) == 'positif').scalar() or 0
+
+    # Rumus persentase kepuasan
+    if total_ulasan > 0:
+        persentase = (ulasan_positif / total_ulasan) * 100
+        kepuasan_display = f"{int(persentase)}%"
+    else:
+        kepuasan_display = "0%"
+
+    # --- 3. LOGIKA GRAFIK 7 HARI TERAKHIR (Tetap sama) ---
     labels = []
     data_porsi = []
-    
     for i in range(6, -1, -1):
         target_date = date.today() - timedelta(days=i)
-        
-        # Ambil total porsi pada tanggal tersebut
         daily_sum = db.session.query(func.sum(LogDistribusi.porsi_sampai))\
             .filter(LogDistribusi.dapur_id == current_user.id)\
             .filter(func.date(LogDistribusi.waktu_sampai) == target_date).scalar() or 0
-        
-        # Simpan label (Nama Hari) dan datanya
-        labels.append(target_date.strftime('%a')) # Hasil: 'Mon', 'Tue', dst.
+        labels.append(target_date.strftime('%a'))
         data_porsi.append(int(daily_sum))
 
     stats = {
         'total_siswa': total_siswa,
         'antrian': antrian_verifikasi,
         'porsi': porsi_hari_ini,
-        'kepuasan': "94%",
-        'chart_labels': labels, # Kirim ke frontend
-        'chart_data': data_porsi   # Kirim ke frontend
+        'kepuasan': kepuasan_display, 
+        'chart_labels': labels,
+        'chart_data': data_porsi
     }
 
     recent_arrivals = LogDistribusi.query.filter_by(dapur_id=current_user.id)\
@@ -275,6 +288,20 @@ def api_simpan_bahan():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 # WAJIB TAMBAH: Route Update agar tombol Edit di JS berfungsi
+@blueprint.route('/penyusunan-resep')
+@login_required
+@admin_required
+def penyusunan_resep():
+    # 1. Cek status persetujuan jika user adalah admin dapur
+    if getattr(current_user, 'role', None) == 'admin_dapur' and not current_user.is_approved:
+        return render_template('home/pending_approval.html'), 200
+    
+    # 2. Ambil data bahan baku milik user yang login
+    ingredients = MasterIngredient.query.filter_by(user_id=current_user.id).order_by(MasterIngredient.id.desc()).all()
+    
+    # 3. Render template dengan data yang diperlukan
+    return render_template('home/penyusunan_resep.html', segment='penyusunan_resep', ingredients=ingredients)
+
 @blueprint.route('/api/update-bahan-master/<int:id>', methods=['POST'])
 @login_required
 @admin_required
@@ -404,31 +431,7 @@ def update_activity_status(activity_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'status': 'error', 'message': str(e)}), 500
-@blueprint.route('/api/update-bahan-master/<int:id>', methods=['POST'])
-@login_required
-@admin_required
-def api_update_bahan(id):
-    try:
-        item = MasterIngredient.query.get_or_404(id)
-        if item.user_id != current_user.id:
-            return jsonify({"status": "error", "message": "Unauthorized"}), 403
-            
-        data = request.json
-        item.name = data.get('name')
-        item.category = data.get('category')
-        item.kcal = float(data.get('kcal', 0))
-        item.carb = float(data.get('carb', 0))
-        item.protein = float(data.get('prot', 0))
-        item.fat = float(data.get('fat', 0))
-        item.fiber = float(data.get('fiber', 0))
-        item.calcium = float(data.get('calcium', 0))
-        item.iron = float(data.get('iron', 0))
-        
-        db.session.commit()
-        return jsonify({"status": "success", "message": "Data gizi diperbarui"})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 400
+
 
 @blueprint.route('/katalog-menu')
 @login_required
@@ -794,6 +797,40 @@ def peta_sebaran():
         return redirect(url_for('home_blueprint.index'))
     return render_template('home/map_sebaran.html', segment='peta_sebaran')
 
+@blueprint.route('/api/locations', methods=['GET'])
+@login_required
+def api_locations():
+    # Proteksi: Hanya Super Admin yang bisa melihat peta sebaran ini
+    if current_user.role != 'super_admin':
+        return jsonify({"status": "error", "message": "Akses Ditolak"}), 403
+
+    # Ambil data Admin Dapur yang sudah di-approve oleh Super Admin
+    # Sesuai model: role='admin_dapur' dan is_approved=True
+    active_kitchens = Users.query.filter_by(
+        role='admin_dapur', 
+        is_approved=True
+    ).all()
+    
+    locations = []
+    for k in active_kitchens:
+        # Pastikan kolom coordinates tidak kosong (hasil deteksi GPS otomatis)
+        if k.coordinates and ',' in k.coordinates:
+            try:
+                # Memecah string "lat, lng" menjadi nilai float untuk Leaflet
+                lat_str, lng_str = k.coordinates.split(',')
+                locations.append({
+                    'id': k.id,
+                    'name': k.kitchen_name or "Dapur Tanpa Nama",
+                    'owner': k.fullname or "-",
+                    'address': k.address or "Alamat belum diisi",
+                    'lat': float(lat_str.strip()),
+                    'lng': float(lng_str.strip())
+                })
+            except (ValueError, IndexError):
+                continue # Lewati jika format koordinat di DB rusak
+                
+    return jsonify(locations)
+
 @blueprint.route('/admin-gizi/monitoring-proses')
 @login_required
 @admin_required
@@ -916,3 +953,32 @@ def edit_menu(id):
     if menu.user_id != current_user.id:
         return render_template('home/page-403.html'), 403
     return render_template('home/edit_menu.html', menu=menu, segment='katalog_menu')
+
+@blueprint.route('/manajemen-kendala')
+@login_required
+@admin_required
+def manajemen_kendala():
+    # Ambil laporan yang masuk ke dapur ini menggunakan backref model
+    # Diurutkan dari yang terbaru
+    laporan = LaporanKendala.query.filter_by(dapur_id=current_user.id)\
+              .order_by(LaporanKendala.created_at.desc()).all()
+              
+    return render_template('home/manajemen_kendala.html', 
+                           laporan=laporan, 
+                           segment='manajemen_kendala')
+
+@blueprint.route('/manajemen-kendala/update', methods=['POST'])
+@login_required
+@admin_required
+def update_status_kendala():
+    report_id = request.form.get('id')
+    new_status = request.form.get('status')
+    
+    report = LaporanKendala.query.get(report_id)
+    if report and report.dapur_id == current_user.id:
+        report.status = new_status
+        # Kolom updated_at akan otomatis terupdate via onupdate=datetime.now
+        db.session.commit()
+        flash(f"Status kendala #{report_id} berhasil diperbarui.", "success")
+    
+    return redirect(url_for('home_blueprint.manajemen_kendala'))

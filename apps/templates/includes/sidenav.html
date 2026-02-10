@@ -18,7 +18,7 @@
                 </a>
             {% else %}
                 <a class="nav-link {% if 'index' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.index') }}">
-                  <i class="fas fa-home"></i>
+                  <i class="fas fa-home "></i>
                   <span class="nav-link-text">Beranda Dapur</span>
                 </a>
             {% endif %}
@@ -31,7 +31,7 @@
             <ul class="navbar-nav">
               <li class="nav-item">
                 <a class="nav-link {% if 'monitoring_proses' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.gizi_monitoring_proses') }}">
-                  <i class="fas fa-desktop"></i>
+                  <i class="fas fa-desktop "></i>
                   <span class="nav-link-text">Live Monitoring</span>
                 </a>
               </li>
@@ -101,7 +101,7 @@
             <ul class="navbar-nav">
               <li class="nav-item">
                 <a class="nav-link {% if 'monitoring' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.route_monitoring') }}">
-                  <i class="fas fa-fire"></i>
+                  <i class="fas fa-fire "></i>
                   <span class="nav-link-text">Update Proses Masak</span>
                 </a>
               </li>
@@ -117,6 +117,14 @@
                   <span class="nav-link-text">Ulasan Siswa (AI)</span>
                 </a>
               </li>
+
+              <!-- <li class="nav-item">
+                <a class="nav-link {% if 'manajemen_kendala' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.manajemen_kendala') }}">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  <span class="nav-link-text">Laporan Kendala</span>
+                </a>
+              </li> -->
+
               <li class="nav-item">
                 <a class="nav-link {% if 'manajemen_artikel' in segment %} active {% endif %}" href="{{ url_for('home_blueprint.daftar_artikel') }}">
                   <i class="fas fa-newspaper"></i>

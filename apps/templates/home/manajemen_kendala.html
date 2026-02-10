@@ -1,0 +1,154 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Manajemen Kendala Operasional {% endblock title %}
+
+{% block content %}
+<div class="header bg-primary pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6">
+                    <h6 class="h2 text-white d-inline-block mb-0">Laporan Kendala Operasional</h6>
+                    <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+                        <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+                            <li class="breadcrumb-item"><a href="#"><i class="fas fa-exclamation-triangle"></i></a></li>
+                            <li class="breadcrumb-item active">Monitoring Sekolah</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="col-lg-6 text-right">
+                    <button class="btn btn-sm btn-neutral" onclick="location.reload()">
+                        <i class="fas fa-sync-alt"></i> Segarkan Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt--6">
+    <div class="row">
+        <div class="col">
+            <div class="card shadow border-0">
+                <div class="card-header border-0">
+                    <h3 class="mb-0">Daftar Laporan Masuk dari Pengelola Sekolah</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-items-center table-flush">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Pengirim (Sekolah)</th>
+                                <th>Kategori</th>
+                                <th>Waktu Laporan</th>
+                                <th>Status</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in laporan %}
+                            <tr>
+                                <td>
+                                    <span class="font-weight-bold">{{ item.pengirim.school_name or 'Sekolah Tidak Terdata' }}</span>
+                                    <br><small class="text-muted">UP: {{ item.pengirim.fullname }}</small>
+                                </td>
+                                <td><span class="badge badge-pill badge-danger">{{ item.kategori }}</span></td>
+                                <td>{{ item.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>
+                                    <span class="badge badge-dot mr-4">
+                                        {% if item.status == 'pending' %}
+                                            <i class="bg-warning"></i> <span>Menunggu</span>
+                                        {% elif item.status == 'diproses' %}
+                                            <i class="bg-info"></i> <span>Diproses</span>
+                                        {% else %}
+                                            <i class="bg-success"></i> <span>Selesai</span>
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" 
+                                            onclick="viewDetail('{{ item.id }}', '{{ item.kategori }}', `{{ item.deskripsi }}`, '{{ item.foto_bukti }}', '{{ item.status }}')">
+                                        Lihat Detail
+                                    </button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5">
+                                    <p class="text-muted italic">Belum ada laporan kendala dari sekolah mitra.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include "includes/footer.html" %}
+</div>
+
+<div class="modal fade" id="modalDetail" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <form class="modal-content" action="{{ url_for('home_blueprint.update_status_kendala') }}" method="POST">
+            <div class="modal-header shadow-sm">
+                <h5 class="modal-title">Detail Laporan Kendala</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-control-label">Foto Bukti Lapangan</label>
+                        <img id="view_foto" src="/static/assets/img/theme/no-image.jpg" class="img-fluid rounded shadow-sm w-100" 
+                             style="max-height: 350px; object-fit: cover;" onerror="this.src='/static/assets/img/theme/no-image.jpg'">
+                    </div>
+                    <div class="col-md-6">
+                        <input type="hidden" name="id" id="view_id">
+                        
+                        <div class="form-group">
+                            <label class="form-control-label">Kategori Kendala</label>
+                            <input type="text" id="view_kategori" class="form-control" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-control-label">Deskripsi Lengkap</label>
+                            <textarea id="view_deskripsi" class="form-control" rows="5" readonly></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-control-label">Update Status Penanganan</label>
+                            <select name="status" id="view_status_select" class="form-control" required>
+                                <option value="pending">Menunggu (Pending)</option>
+                                <option value="diproses">Sedang Diproses</option>
+                                <option value="selesai">Masalah Selesai</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-success shadow-sm">Update Status Kendala</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+    function viewDetail(id, kategori, deskripsi, foto, status) {
+        // Set data ke field modal
+        document.getElementById('view_id').value = id;
+        document.getElementById('view_kategori').value = kategori;
+        document.getElementById('view_deskripsi').value = deskripsi;
+        document.getElementById('view_status_select').value = status;
+        
+        // Logika penanganan foto bukti
+        const imgElement = document.getElementById('view_foto');
+        if(foto && foto !== 'None' && foto !== '') {
+            imgElement.src = '/static/uploads/kendala/' + foto;
+        } else {
+            imgElement.src = '/static/assets/img/theme/no-image.jpg';
+        }
+        
+        $('#modalDetail').modal('show');
+    }
+</script>
+{% endblock %}

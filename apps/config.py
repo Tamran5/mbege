@@ -6,6 +6,7 @@ Copyright (c) 2019 - present AppSeed.us
 import os
 from decouple import config
 
+
 class Config(object):
 
     basedir = os.path.abspath(os.path.dirname(__file__))
@@ -17,6 +18,9 @@ class Config(object):
     
     # Memastikan sesi dibersihkan saat browser ditutup (opsional)
     SESSION_PERMANENT = False
+
+    GOOGLE_CLIENT_ID     = config('GOOGLE_CLIENT_ID', default=None)
+    GOOGLE_CLIENT_SECRET = config('GOOGLE_CLIENT_SECRET', default=None)
     
     # --- Konfigurasi Database (MySQL) ---
     # Menggunakan +pymysql untuk koneksi stabil dari Flask ke MySQL

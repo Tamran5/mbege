@@ -68,7 +68,7 @@ class Users(db.Model, UserMixin):
     district = db.Column(db.String(100))
     village = db.Column(db.String(100))
     address = db.Column(db.Text) # Detail Jalan/RT/RW
-    coordinates = db.Column(db.String(100)) # Lokasi GPS Lansia
+    coordinates = db.Column(db.String(100)) 
 
     # --- RELASI KEMITRAAN BERJENJANG ---
     # 1. Menghubungkan Siswa ke Sekolah
@@ -85,7 +85,8 @@ class Users(db.Model, UserMixin):
     pendaftar_sekolah = db.relationship('Users', 
                                     foreign_keys=[sekolah_id],
                                     backref=db.backref('daftar_siswa', remote_side=[id]))
-
+    
+    profile_picture = db.Column(db.String(255), nullable=True, default='default_avatar.png')
     # --- FILE UPLOADS (Path ke static/uploads) ---
     file_ktp = db.Column(db.String(255))         
     file_sk_operator = db.Column(db.String(255)) 
@@ -335,6 +336,27 @@ class ChatHistory(db.Model):
             'reply': self.reply,
             'time': self.timestamp.strftime('%H:%M')
         }
+    
+class LaporanKendala(db.Model):
+    __tablename__ = 'laporan_kendala'
+
+    id = db.Column(db.Integer, primary_key=True)
+    
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    dapur_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    kategori = db.Column(db.String(50), nullable=False)
+    deskripsi = db.Column(db.Text, nullable=False)
+    foto_bukti = db.Column(db.String(255), nullable=True)
+
+    status = db.Column(db.String(20), default='pending') 
+    
+    # Pelacakan Waktu
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
+    pengirim = db.relationship('Users', foreign_keys=[user_id], backref='laporan_dikirim')
+    dapur_tujuan = db.relationship('Users', foreign_keys=[dapur_id], backref='laporan_masuk_dapur')
 
 # --- LOGIN LOADER ---
 @login_manager.user_loader
@@ -346,3 +368,4 @@ def request_loader(request):
     email = request.form.get('email')
     user = Users.query.filter_by(email=email).first()
     return user if user else None
+

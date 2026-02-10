@@ -7,6 +7,7 @@ from flask_cors import CORS
 from flask_mail import Mail # Tambahkan Flask-Mail
 from authlib.integrations.flask_client import OAuth 
 import os
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Inisialisasi Database dan Ekstensi
 db = SQLAlchemy()
@@ -20,12 +21,12 @@ def register_extensions(app):
     oauth.init_app(app)
     mail.init_app(app) 
     
-    # CORS tetap diaktifkan untuk mendukung Flutter Web
-    # CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
-    CORS(app, resources={r"/api/*": {
+    # --- PERBAIKAN CORS ---
+    # Ubah r"/api/*" menjadi r"/*" agar folder /static (gambar) juga bisa diakses oleh Flutter Web
+    CORS(app, resources={r"/*": {
         "origins": "*",
-        "methods": ["POST", "GET", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization", "ngrok-skip-browser-warning"]
+        "methods": ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
+        "allow_headers": ["Content-Type", "Authorization", "ngrok-skip-browser-warning", "Access-Control-Allow-Origin"]
     }})
 
 def register_blueprints(app):
@@ -55,6 +56,8 @@ def create_app(config):
     register_extensions(app)
     register_blueprints(app)
 
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+    
     Migrate(app, db)
 
     return app

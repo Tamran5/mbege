@@ -12,7 +12,7 @@ from apps.authentication.util import hash_pass,  verify_pass
 from sqlalchemy import or_
 
 from apps import db
-from apps.authentication.models import Users, LogDistribusi, Artikel,MasterIngredient, Menus, MenuIngredients,UlasanPenerima,AktivitasDapur,ChatHistory
+from apps.authentication.models import Users, LogDistribusi, Artikel,MasterIngredient, Menus, MenuIngredients,UlasanPenerima,AktivitasDapur,ChatHistory,LaporanKendala
 from . import api_bp
 from apps.api.utils import token_required
 from apps.home.utils import get_sentiment_prediction, proses_verifikasi_ktp, get_chatbot_response
@@ -20,6 +20,92 @@ from apps.home.utils import get_sentiment_prediction, proses_verifikasi_ktp, get
 mail = Mail()
 
 
+# Konfigurasi folder upload (Sesuaikan path ini)
+UPLOAD_FOLDER = 'static/uploads/profile_pics'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@api_bp.route('/update-profile', methods=['POST'])
+@token_required
+def update_profile(current_user):
+    try:
+        # --- 1. Ambil Data Teks (Multipart Form) ---
+        name = request.form.get('name')
+        email = request.form.get('email') # Jika email boleh diubah
+        phone = request.form.get('phone')
+        
+        # Data Role Spesifik
+        npsn = request.form.get('npsn')
+        school_name = request.form.get('school_name')
+        nisn = request.form.get('nisn')
+        student_class = request.form.get('user_class') # Key dari Flutter
+        nik = request.form.get('nik')
+
+        # --- 2. Update Data Dasar ---
+        if name: current_user.fullname = name
+        if email: current_user.email = email
+        if phone: current_user.phone = phone
+        
+        # --- 3. Update Data Spesifik Role ---
+        if current_user.role == 'pengelola_sekolah':
+            if npsn: current_user.npsn = npsn
+            if school_name: current_user.school_name = school_name
+        
+        elif current_user.role == 'siswa':
+            if nisn: current_user.nisn = nisn
+            if student_class: current_user.user_class = student_class 
+            
+        elif current_user.role in ['lansia', 'penerima_lansia']:
+            if nik: current_user.nik = nik 
+
+        # --- 4. Handle Upload Foto ---
+        if 'photo' in request.files:
+            file = request.files['photo']
+            
+            if file and allowed_file(file.filename):
+                # Overwrite foto lama berdasarkan ID User
+                new_filename = f"profile_{current_user.id}.jpg"
+                
+                if not os.path.exists(UPLOAD_FOLDER):
+                    os.makedirs(UPLOAD_FOLDER)
+                
+                file.save(os.path.join(UPLOAD_FOLDER, new_filename))
+                
+                # Simpan nama file ke database
+                current_user.profile_picture = new_filename
+
+        # --- 5. Simpan ke Database ---
+        db.session.commit()
+
+        # --- 6. KIRIM RESPON LENGKAP (PENTING UNTUK FLUTTER) ---
+        return jsonify({
+            "status": "success", 
+            "message": "Profil berhasil diperbarui",
+            "data": {
+                # Data Dasar
+                "name": current_user.fullname,
+                "phone": current_user.phone,
+                "email": current_user.email,
+                "role": current_user.role,
+                "photo": current_user.profile_picture,
+                
+                # Data Role (Kirim semua agar _saveSession di Flutter tidak menimpa dengan null)
+                "nik": getattr(current_user, 'nik', None),
+                "nisn": getattr(current_user, 'nisn', None),
+                "npsn": getattr(current_user, 'npsn', None),
+                "school_name": getattr(current_user, 'school_name', None),
+                "user_class": getattr(current_user, 'user_class', None),
+                "is_approved": bool(current_user.is_approved)
+            }
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
 def get_db_context(user_message):
     context = ""
     
@@ -91,8 +177,16 @@ def generate_random_token():
 
 @api_bp.route('/register', methods=['POST'])
 def register():
-    # Menggunakan request.form karena ada pengiriman file (SK Operator)
+    # Menggunakan request.form karena mendukung pengiriman file (Multipart)
     data = request.form 
+    # --- TAMBAHKAN BARIS INI UNTUK DEBUGGING ---
+    print("----------------------------------------")
+    print("DEBUG DATA MASUK:", data)
+    print("DEBUG Role:", data.get('role'))
+    print("DEBUG Sekolah ID:", data.get('sekolah_id'))
+    print("DEBUG Token:", data.get('registration_token'))
+    print("----------------------------------------")
+    # ---------------------------------------------
     role = data.get('role')
     phone = data.get('phone', '').strip()
     email = data.get('email', '').strip()
@@ -120,23 +214,21 @@ def register():
         village=data.get('village'),
         address=data.get('address'),
         dapur_id=data.get('dapur_id'), 
-        is_approved=False # Default menunggu verifikasi admin
+        is_approved=False # Default menunggu verifikasi admin dapur
     )
 
-    # --- POIN KRUSIAL: Hashing Password ---
-    # Mengubah password 'otong' menjadi BLOB (bytes) berisi Salt + Hash
-    new_user.password = hash_pass(password)
+    # --- POIN KRUSIAL: Menghindari Double Hashing ---
+    # Kirim password string mentah ke setter model agar tidak terjadi AttributeError
+    new_user.password = password
 
     # 4. Logika Khusus Berdasarkan Role
     if role == 'pengelola_sekolah':
         new_user.npsn = data.get('npsn')
         new_user.school_name = data.get('school_name')
         new_user.student_count = int(data.get('student_count', 0))
-        
-        # Generate token unik untuk dibagikan ke siswa
         new_user.school_token = generate_random_token() 
         
-        # Simpan file SK jika diunggah
+        # Simpan file SK Operator
         if 'file_sk_operator' in request.files:
             new_user.file_sk_operator = save_document(
                 request.files['file_sk_operator'], 
@@ -150,18 +242,28 @@ def register():
         if not sekolah_id or not token_input:
             return jsonify({"status": "error", "message": "Pilih Sekolah dan masukkan Token"}), 400
 
-        # Cari sekolah tujuan
         school = Users.query.filter_by(id=sekolah_id, role='pengelola_sekolah').first()
-        if not school:
-            return jsonify({"status": "error", "message": "Sekolah tidak ditemukan"}), 404
-
-        # Validasi Token Registrasi Siswa
-        if school.school_token != token_input:
+        if not school or school.school_token != token_input:
             return jsonify({"status": "error", "message": "Token registrasi salah!"}), 401
 
         new_user.nisn = data.get('nisn')
         new_user.sekolah_id = sekolah_id
-        new_user.dapur_id = school.dapur_id # Menyamakan dapur dengan sekolahnya
+        new_user.dapur_id = school.dapur_id
+
+    elif role == 'lansia':
+        # --- PENAMBAHAN LOGIKA KHUSUS LANSIA ---
+        # NIK hasil ekstraksi AI YOLOv11 dari Flutter
+        new_user.nik = data.get('nik')
+        
+        # Titik GPS rumah untuk keperluan pengantaran makanan
+        new_user.coordinates = data.get('coordinates')
+        
+        # Simpan file JPG KTP asli agar bisa direview Admin Dapur
+        if 'file_ktp' in request.files:
+            new_user.file_ktp = save_document(
+                request.files['file_ktp'], 
+                'documents/ktp'
+            )
 
     # 5. Eksekusi Simpan ke Database
     try:
@@ -178,40 +280,49 @@ def register():
     
 
 # --- 2. RUTE LOGIN ---
+
 @api_bp.route('/login', methods=['POST'])
 def login():
-    # 1. Ambil data JSON dari Flutter
     data = request.get_json()
+    
+    # 1. Validasi Format JSON
     if not data:
         return jsonify({"status": "error", "message": "Format data tidak valid"}), 400
 
-    phone = data.get('phone', '').strip()
+    # Ambil data
+    identifier = data.get('phone', '').strip() 
     password = data.get('password')
 
-    # 2. Cari User berdasarkan Nomor HP
-    user = Users.query.filter_by(phone=phone).first()
+    # 2. VALIDASI INPUT KOSONG (Ini yang mencegah Error 500/AttributeError)
+    if not identifier or not password:
+        return jsonify({
+            "status": "error", 
+            "message": "Nomor HP/Email dan Password wajib diisi"
+        }), 400
 
-    # 3. Verifikasi Keberadaan User dan Validitas Password
-    # verify_password di model akan memanggil fungsi verify_pass kustom Anda
+    # 3. Cari User (Logic Email ATAU HP)
+    user = Users.query.filter(
+        or_(Users.phone == identifier, Users.email == identifier)
+    ).first()
+
+    # 4. Verifikasi Password
     if not user or not user.verify_password(password):
-        # Kembalikan 401 jika gagal agar Flutter bisa menangkap pesan error
-        return jsonify({"status": "error", "message": "Nomor HP atau Password salah"}), 401
+        return jsonify({"status": "error", "message": "Email/Nomor HP atau Password salah"}), 401
 
-    # 4. Logika Nama Sekolah Dinamis
-    # Jika role adalah siswa, ambil nama sekolah dari pengelola terkait via sekolah_id
+    # ... (Logika Nama Sekolah Dinamis tetap sama)
     display_school_name = user.school_name 
     if user.role == 'siswa' and user.sekolah_id:
         sekolah_terkait = Users.query.get(user.sekolah_id)
         display_school_name = sekolah_terkait.school_name if sekolah_terkait else "Sekolah Belum Terdaftar"
 
-    # 5. Pembuatan JWT Token (Berlaku 24 Jam)
+    # 3. Pembuatan JWT Token
     token = jwt.encode({
         'user_id': user.id,
         'role': user.role,
         'exp': datetime.now(timezone.utc) + timedelta(hours=24)
     }, current_app.config['SECRET_KEY'], algorithm="HS256")
 
-    # 6. Kirim Respon Sukses ke Flutter
+    # 4. Kirim Respon Sukses
     return jsonify({
         "status": "success",
         "token": token,
@@ -219,6 +330,7 @@ def login():
             "name": user.fullname,
             "email": user.email,
             "phone": user.phone,
+            "nik": user.nik,
             "role": user.role,
             "is_approved": bool(user.is_approved),
             "school_name": display_school_name, 
@@ -227,36 +339,6 @@ def login():
         }
     }), 200
 
-@api_bp.route('/update-profile', methods=['POST'])
-@token_required
-def update_profile(current_user):
-    data = request.get_json()
-    
-    try:
-        # 1. Update data dasar (Berlaku untuk semua role)
-        if 'name' in data: current_user.fullname = data.get('name')
-        if 'email' in data: current_user.email = data.get('email')
-        if 'phone' in data: current_user.phone = data.get('phone')
-
-        # 2. Update data spesifik berdasarkan ROLE
-        if current_user.role == 'pengelola_sekolah':
-            if 'npsn' in data: current_user.npsn = data.get('npsn')
-            if 'school_name' in data: current_user.school_name = data.get('school_name')
-        
-        elif current_user.role == 'siswa':
-            if 'nisn' in data: current_user.nisn = data.get('nisn')
-            if 'class' in data: current_user.student_class = data.get('class') # Pastikan kolom ini ada di Model
-            
-        elif current_user.role == 'lansia':
-            if 'nik' in data: current_user.nik = data.get('nik') # Pastikan kolom ini ada di Model
-            # Lansia mungkin tidak punya NPSN/Sekolah
-
-        db.session.commit()
-        return jsonify({"status": "success", "message": f"Profil {current_user.role} berhasil diperbarui"}), 200
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
 
 @api_bp.route('/request-change-email', methods=['POST'])
 @token_required
@@ -300,15 +382,35 @@ def verify_change_email(current_user):
 def check_status(current_user):
     return jsonify({
         "status": "success",
-        "role": current_user.role,
-        "is_approved": current_user.is_approved,
+        "role": current_user.role,             # Info untuk logika routing (opsional di sini)
+        "is_approved": current_user.is_approved, 
         "data": {
+            # --- DATA UTAMA (Wajib ada agar _saveSession Flutter aman) ---
             "name": current_user.fullname,
             "email": current_user.email,
-            "school_name": current_user.school_name, #
-            "school_token": current_user.school_token
+            "phone": current_user.phone,
+            "role": current_user.role,                 # PENTING: Masukkan lagi disini
+            "is_approved": current_user.is_approved,   # PENTING: Masukkan lagi disini
+            
+            # --- PERBAIKAN 1: FOTO PROFIL ---
+            # Pastikan nama kolom di DB sesuai (misal: profile_picture atau photo)
+            "photo": current_user.profile_picture, 
+
+            # --- DATA SEKOLAH ---
+            "school_name": current_user.school_name,
+            # Registration token jika perlu disimpan
+            "registration_token": getattr(current_user, 'registration_token', None), 
+            
+            # --- DATA SPESIFIK ROLE ---
+            "npsn": getattr(current_user, 'npsn', None),
+            "nisn": getattr(current_user, 'nisn', None),
+            "nik": getattr(current_user, 'nik', None),
+
+            # --- PERBAIKAN 2: KEY KELAS ---
+            # Gunakan key 'user_class' agar cocok dengan Flutter
+            "user_class": getattr(current_user, 'user_class', None) 
         }
-    })
+    }), 200
 
 @api_bp.route('/change-password', methods=['POST'])
 @token_required
@@ -872,56 +974,128 @@ def google_login():
     }), 200
 
 
+
 @api_bp.route('/chatbot', methods=['POST'])
 @token_required
 def api_chatbot(current_user):
+    # 1. Validasi Input
     data = request.get_json()
-    user_message = data.get('message', '')
+    user_message = data.get('message', '').strip()
 
     if not user_message:
-        return jsonify({"status": "error", "message": "Pesan kosong"}), 400
+        return jsonify({"status": "error", "message": "Pesan tidak boleh kosong"}), 400
 
-    # 1. AMBIL RIWAYAT PESAN TERAKHIR (Memory)
-    # Mengambil 3 percakapan terakhir untuk memberikan konteks pada AI
-    past_chats = ChatHistory.query.filter_by(user_id=current_user.id)\
-                 .order_by(ChatHistory.timestamp.desc()).limit(3).all()
-    
-    chat_memory = ""
-    for chat in reversed(past_chats):
-        chat_memory += f"User: {chat.message}\nAssistant: {chat.reply}\n"
-
-    # 2. AMBIL DATA DARI DATABASE (RAG)
-    db_context = get_db_context(user_message)
-
-    # 3. SUSUN PROMPT DENGAN KONTEKS & MEMORI
-    prompt = f"""
-    System: Anda adalah asisten pintar MBG. 
-    Gunakan data riil ini jika relevan: {db_context}
-    
-    Riwayat Percakapan Sebelumnya:
-    {chat_memory}
-    
-    User: {user_message}
-    Assistant:"""
-
-    # 4. GENERATE JAWABAN
-    bot_reply = get_chatbot_response(prompt)
-
-    # 5. SIMPAN KE DATABASE (Riwayat Baru)
     try:
+        # 2. Ambil Memory (3 Pesan Terakhir)
+        # Memory membantu asisten memahami konteks pembicaraan sebelumnya
+        past_chats = ChatHistory.query.filter_by(user_id=current_user.id)\
+                     .order_by(ChatHistory.timestamp.desc()).limit(3).all()
+        
+        chat_memory = ""
+        for chat in reversed(past_chats):
+            chat_memory += f"User: {chat.message}\nAsisten: {chat.reply}\n"
+
+        bot_reply = get_chatbot_response(user_message, chat_memory)
+
+        # 4. Simpan Riwayat Baru ke Database
         new_chat = ChatHistory(
             user_id=current_user.id,
             message=user_message,
-            reply=bot_reply
+            reply=bot_reply,
+            timestamp=datetime.now()
         )
         db.session.add(new_chat)
         db.session.commit()
+
+        # 5. Kirim Respon ke Flutter
+        return jsonify({
+            "status": "success",
+            "data": {
+                "reply": bot_reply,
+                "timestamp": datetime.now().strftime('%H:%M'),
+                "user": current_user.username
+            }
+        }), 200
+
     except Exception as e:
         db.session.rollback()
-        print(f"Gagal menyimpan riwayat: {e}")
+        print(f"Error pada Route Chatbot: {e}")
+        return jsonify({
+            "status": "error", 
+            "message": "Terjadi kesalahan pada sistem asisten."
+        }), 500
 
-    return jsonify({
-        "status": "success",
-        "reply": bot_reply,
-        "timestamp": datetime.now().strftime('%H:%M')
-    })
+@api_bp.route('/laporkan-kendala', methods=['POST'])
+@token_required # Asumsi Anda menggunakan decorator token untuk Flutter
+def api_laporkan_kendala(current_user):
+    # Pastikan hanya pengelola sekolah yang bisa melapor
+    if current_user.role != 'pengelola_sekolah':
+        return jsonify({"message": "Akses ditolak, hanya untuk pengelola"}), 403
+
+    try:
+        kategori = request.form.get('kategori')
+        deskripsi = request.form.get('deskripsi')
+        file = request.files.get('foto')
+
+        # Ambil ID dapur yang bermitra dengan sekolah ini
+        target_dapur_id = current_user.dapur_id
+        
+        if not target_dapur_id:
+            return jsonify({"message": "Sekolah Anda belum terhubung ke mitra dapur"}), 400
+
+        filename = None
+        if file:
+            # Penamaan file unik berdasarkan ID user dan timestamp
+            filename = f"kendala_{current_user.id}_{int(datetime.now().timestamp())}.jpg"
+            file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], 'kendala', filename))
+
+        new_report = LaporanKendala(
+            user_id=current_user.id,
+            dapur_id=target_dapur_id, # Otomatis terhubung ke dapur mitra
+            kategori=kategori,
+            deskripsi=deskripsi,
+            foto_bukti=filename
+        )
+        
+        db.session.add(new_report)
+        db.session.commit()
+
+        return jsonify({"status": "success", "message": "Laporan terkirim ke dapur mitra"}), 201
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
+@api_bp.route('/articles', methods=['GET'])
+@token_required
+def get_article(current_user):
+    try:
+        # 1. Ambil data asli dari Database (Urutkan terbaru)
+        articles = Artikel.query.order_by(Artikel.created_at.desc()).all()
+        
+        data = []
+        for art in articles:
+            # 2. Konstruksi URL Gambar yang Valid (Support Ngrok)
+            # Pastikan folder 'static/uploads/articles/' sesuai dengan lokasi penyimpanan Anda
+            image_url = None
+            if art.foto:
+                base_url = request.host_url.rstrip('/')
+                image_url = f"{base_url}/static/uploads/articles/{art.foto}"
+
+            # 3. Mapping data dari Model Python ke JSON Flutter
+            data.append({
+                "id": art.id,
+                "judul": art.judul,           # Sesuai model: judul
+                "konten": art.konten,         # Sesuai model: konten
+                "target": art.target_role,    # Sesuai model: target_role
+                "foto": art.foto,             # Nama file saja (backup)
+                "image_url": image_url,       # URL Lengkap siap pakai
+                "created_at": art.created_at.strftime('%Y-%m-%d')
+            })
+
+        return jsonify({
+            "status": "success",
+            "data": data
+        }), 200
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
